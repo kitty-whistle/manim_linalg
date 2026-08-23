@@ -162,6 +162,9 @@ class TriangleE2:
         self.BC = LineE2(self.B, self.C)
         self.AC = LineE2(self.A, self.C)
 
+        self.opposite_sides = {self.A: self.BC, self.B: self.AC, self.C: self.AB}
+        self.adjacent_sides = {self.A: [self.AB, self.AC], self.B: [self.BC, -self.AB], self.C: [-self.AC, -self.BC]}
+
     @property
     def perimeter(self) -> float:
         """
@@ -237,17 +240,9 @@ class TriangleE2:
         :param vertex: Вершина треугольника, из которой проводится высота (точка R^2)
         :return: Высота (линия LineE2)
         """
-        if np.all(vertex == self.A):
-            correct_line = self.BC
-        elif np.all(vertex == self.B):
-            correct_line = self.AC
-        elif np.all(vertex == self.C):
-            correct_line = self.AB
-        else:
-            raise TypeError
-
-        normal_line_unnormalized = correct_line.line_by_angle(math.pi / 2, vertex, 1)
-        end_point = normal_line_unnormalized.intersection(correct_line)
+        opposite_side = self.opposite_sides[vertex]
+        normal_line_unnormalized = opposite_side.line_by_angle(math.pi / 2, vertex, 1)
+        end_point = normal_line_unnormalized.intersection(opposite_side)
         return LineE2(vertex, end_point)
 
     def bisector(self, vertex: ndarray) -> LineE2:
@@ -256,33 +251,26 @@ class TriangleE2:
         :param vertex: Вершина треугольника, из которой проводится биссектриса (точка R^2)
         :return: Биссектриса (линия LineE2)
         """
-        if np.all(vertex == self.A):
-            line_main = self.AC
-            line_angle = self.AB
-            correct_line = self.BC
-        elif np.all(vertex == self.B):
-            line_main = -self.AB
-            line_angle = self.BC
-            correct_line = self.AC
-        elif np.all(vertex == self.C):
-            line_main = -self.BC
-            line_angle = -self.AC
-            correct_line = self.AB
-        else:
-            raise TypeError
+        adjacent_side_1 = self.adjacent_sides[vertex][0]
+        adjacent_side_2 = self.adjacent_sides[vertex][1]
+        opposite_side = self.opposite_sides[vertex]
 
-        angle_value = line_main.angle(line_angle) / 2
+        angle_value = adjacent_side_1.angle(opposite_side) / 2
 
-        bisector_line_unnormalized_1 = line_main.line_by_angle(angle_value, vertex, 1)
-        end_point_1 = bisector_line_unnormalized_1.intersection(correct_line)
+        # Откладываем угол от первой прилежащей стороны против часовой стрелки ↓
+        bisector_line_unnormalized_1 = adjacent_side_1.line_by_angle(angle_value, vertex, 1)
+        end_point_1 = bisector_line_unnormalized_1.intersection(opposite_side)
 
-        bisector_line_unnormalized_2 = line_angle.line_by_angle(angle_value, vertex, 1)
-        end_point_2 = bisector_line_unnormalized_2.intersection(correct_line)
+        # Откладываем угол от второй прилежащей стороны против часовой стрелки ↓
+        bisector_line_unnormalized_2 = adjacent_side_2.line_by_angle(angle_value, vertex, 1)
+        end_point_2 = bisector_line_unnormalized_2.intersection(opposite_side)
 
+        # Два варианта биссектрисы ↓
         bis_1 = LineE2(vertex, end_point_1)
         bis_2 = LineE2(vertex, end_point_2)
 
-        if round(bis_1.angle(line_angle), 3) == round(bis_2.angle(line_angle), 3):
+        # Проверяем на корректность ↓
+        if round(bis_1.angle(adjacent_side_1), 3) == round(bis_2.angle(adjacent_side_2), 3):
             return bis_1
         return bis_2
 
@@ -292,15 +280,7 @@ class TriangleE2:
         :param vertex: Вершина треугольника, из которой проводится медиана (точка R^2)
         :return: Медиана (линия LineE2)
         """
-        if np.all(vertex == self.A):
-            correct_line = self.BC
-        elif np.all(vertex == self.B):
-            correct_line = self.AC
-        elif np.all(vertex == self.C):
-            correct_line = self.AB
-        else:
-            raise TypeError
-        return LineE2(vertex, correct_line.get_Line().get_center())
+        return LineE2(vertex, self.opposite_sides[vertex].get_Line().get_center())
 
     def unsigned_circle_center(self, vertex: ndarray) -> ndarray:
         """
@@ -308,34 +288,19 @@ class TriangleE2:
         :param vertex: Вершина треугольника, на угле которой построена окружность (точка R^2)
         :return: Точка R^2
         """
-        if np.all(vertex == self.A):
-            first_direction = self.AB
-            common_direction = self.BC
-            intercept_direction = self.AC
-        elif np.all(vertex == self.B):
-            first_direction = -self.AB
-            common_direction = self.AC
-            intercept_direction = self.BC
-        elif np.all(vertex == self.C):
-            first_direction = -self.AC
-            common_direction = self.AB
-            intercept_direction = -self.BC
+        adjacent_side_1 = self.adjacent_sides[vertex][0]
+        opposite_side = self.opposite_sides[vertex]
 
-        else:
-            raise TypeError
+        angle_value = adjacent_side_1.angle(opposite_side) / 2
 
-        angle_value = first_direction.angle(common_direction) / 2
+        # Откладываем угол от первой прилежащей стороны против часовой стрелки ↓
+        bis_1 = adjacent_side_1.line_by_angle(angle_value, adjacent_side_1.end_point, 1)
 
-        bis_line_unnormalized_1 = first_direction.line_by_angle(angle_value, first_direction.end_point, 1)
-        end_point_1 = bis_line_unnormalized_1.intersection(intercept_direction)
+        # Откладываем угол от противолежащей стороны против часовой стрелки ↓
+        bis_2 = opposite_side.line_by_angle(angle_value, adjacent_side_1.end_point, 1)
 
-        bis_line_unnormalized_2 = common_direction.line_by_angle(angle_value, first_direction.end_point, 1)
-        end_point_2 = bis_line_unnormalized_2.intersection(intercept_direction)
-
-        bis_1 = LineE2(first_direction.end_point, end_point_1)
-        bis_2 = LineE2(first_direction.end_point, end_point_2)
-
-        if round(bis_1.angle(common_direction), 3) == round(bis_1.angle(first_direction), 3):
+        # Проверяем на корректность ↓
+        if round(bis_1.angle(opposite_side), 3) == round(bis_1.angle(adjacent_side_1), 3):
             return bis_1.intersection(self.bisector(vertex))
         return bis_2.intersection(self.bisector(vertex))
 
@@ -345,16 +310,7 @@ class TriangleE2:
         :param vertex: Вершина треугольника, на угле которой построена окружность (точка R^2)
         :return: Длина радиуса
         """
-        if np.all(vertex == self.A):
-            common_direction = self.BC
-        elif np.all(vertex == self.B):
-            common_direction = self.AC
-        elif np.all(vertex == self.C):
-            common_direction = self.AB
-        else:
-            raise TypeError
-
-        return self.area / (0.5 * self.perimeter - abs(common_direction.direction_vector))
+        return self.area / (0.5 * self.perimeter - abs(self.opposite_sides[vertex].direction_vector))
 
 
 if __name__ == "__main__":
