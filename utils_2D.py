@@ -33,7 +33,7 @@ class LineE2:
             [round(math.sin(angle), 10), round(math.cos(angle), 10)]
         ]))
 
-    def interception(self, other: LineE2) -> ndarray:
+    def intersection(self, other: LineE2) -> ndarray:
         """
         Выискивание пересечения 2 прямых на плоскости методом Крамера
         :param other: другая линия на плоскости
@@ -84,12 +84,19 @@ class LineE2:
         end_point = np.array([self._end_point[0], self._end_point[1], 0])
         return Line(start=start_point, end=end_point, **kwargs)
 
+    def get_Arrow(self, **kwargs) -> Arrow:
+        start_point = np.array([self._start_point[0], self._start_point[1], 0])
+        end_point = np.array([self._end_point[0], self._end_point[1], 0])
+        return Arrow(start=start_point, end=end_point, **kwargs)
+
+    def scale(self, scale: float) -> LineE2:
+        return LineE2(self.start_manim, self._start_point + (self.direction_vector * scale).coordinates)
+
     def __neg__(self) -> LineE2:
         return LineE2(self._end_point, self._start_point)
 
     def __abs__(self) -> float:
         return abs(self.direction_vector)
-
 
 class TriangleE2:
     def __init__(self, A_point: ndarray, B_point: ndarray, C_point: ndarray):
@@ -116,7 +123,7 @@ class TriangleE2:
 
     @property
     def incenter(self) -> ndarray:
-        return self.bisector(self.A).interception(self.bisector(self.B))
+        return self.bisector(self.A).intersection(self.bisector(self.B))
 
     @property
     def inscribed_radius(self) -> float:
@@ -124,11 +131,11 @@ class TriangleE2:
 
     @property
     def centroid(self) -> ndarray:
-        return self.median(self.A).interception(self.median(self.B))
+        return self.median(self.A).intersection(self.median(self.B))
 
     @property
     def orthocenter(self) -> ndarray:
-        return self.height(self.A).interception(self.height(self.B))
+        return self.height(self.A).intersection(self.height(self.B))
 
     @property
     def circumscribed_center(self) -> ndarray:
@@ -137,7 +144,7 @@ class TriangleE2:
 
         median_perpendicular_normalized_AB = self.AB.line_by_angle(math.pi/2, AB_center, 1)
         median_perpendicular_normalized_BC = self.BC.line_by_angle(math.pi/2, BC_center, 1)
-        return median_perpendicular_normalized_AB.interception(median_perpendicular_normalized_BC)
+        return median_perpendicular_normalized_AB.intersection(median_perpendicular_normalized_BC)
 
     @property
     def circumscribed_radius(self) -> float:
@@ -155,7 +162,7 @@ class TriangleE2:
             raise TypeError
 
         normal_line_unnormalized = correct_line.line_by_angle(math.pi / 2, vertex, 1)
-        end_point = normal_line_unnormalized.interception(correct_line)
+        end_point = normal_line_unnormalized.intersection(correct_line)
         return LineE2(vertex, end_point)
 
     def bisector(self, vertex: ndarray) -> LineE2:
@@ -178,9 +185,21 @@ class TriangleE2:
         angle_value = line_main.angle(line_angle) / 2
         if angle_value > math.pi / 2:
             angle_value = math.pi - angle_value
-        bisector_line_unnormalized = line_main.line_by_angle(angle_value, vertex, 1)
-        end_point = bisector_line_unnormalized.interception(correct_line)
-        return LineE2(vertex, end_point)
+
+        bisector_line_unnormalized_1 = line_main.line_by_angle(angle_value, vertex, 1)
+        end_point_1 = bisector_line_unnormalized_1.intersection(correct_line)
+        bis_1 = LineE2(vertex, end_point_1)
+
+        bisector_line_unnormalized_2 = line_angle.line_by_angle(angle_value, vertex, 1)
+        end_point_2 = bisector_line_unnormalized_2.intersection(correct_line)
+        bis_2 = LineE2(vertex, end_point_2)
+
+        if correct_line._start_point[0] < bis_1._end_point[0] < correct_line._end_point[0] or correct_line._end_point[0] < bis_1._end_point[0] < correct_line._start_point[0]:
+            return bis_1
+        return bis_2
+
+
+        # return LineE2(vertex, end_point)
 
     def median(self, vertex: ndarray) -> LineE2:
         vertex = vertex[0:2]
@@ -194,9 +213,60 @@ class TriangleE2:
             raise TypeError
         return LineE2(vertex, correct_line.get_Line().get_center())
 
+    def unsigned_circle_center(self, vertex: ndarray) -> ndarray:
+        vertex = vertex[0:2]
+        if np.all(vertex == self.A):
+            first_direction = self.AB
+            common_direction = self.BC
+            intercept_direction = self.AC
+        elif np.all(vertex == self.B):
+            first_direction = -self.AB
+            common_direction = self.AC
+            intercept_direction = self.BC
+        elif np.all(vertex == self.C):
+            first_direction = -self.AC
+            common_direction = self.AB
+            intercept_direction = -self.BC
+
+        else:
+            raise TypeError
+
+        angle_value = first_direction.angle(common_direction) / 2
+        # if angle_value < math.pi / 2:
+        #     angle_value = math.pi - angle_value
+
+        bis_line_unnormalized_1 = first_direction.line_by_angle(angle_value, first_direction._end_point, 1)
+        end_point_1 = bis_line_unnormalized_1.intersection(intercept_direction)
+
+        bis_line_unnormalized_2 = common_direction.line_by_angle(angle_value, first_direction._end_point, 1)
+        end_point_2 = bis_line_unnormalized_2.intersection(intercept_direction)
+
+        bis_1 = LineE2(first_direction._end_point, end_point_1)
+        bis_2 = LineE2(first_direction._end_point, end_point_2)
+
+        if round(bis_1.angle(common_direction), 3) == round(bis_1.angle(first_direction), 3):
+            return bis_1.intersection(self.bisector(vertex))
+        return bis_2.intersection(self.bisector(vertex))
+
+    def unsigned_circle_radius(self, vertex: ndarray) -> float:
+        vertex = vertex[0:2]
+        if np.all(vertex == self.A):
+            common_direction = self.BC
+        elif np.all(vertex == self.B):
+            common_direction = self.AC
+        elif np.all(vertex == self.C):
+            common_direction = self.AB
+        else:
+            raise TypeError
+
+        return self.area / (0.5 * self.perimeter - abs(common_direction.direction_vector))
+
+
+
 
 if __name__ == "__main__":
     pass
+
 
 
 
