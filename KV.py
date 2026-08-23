@@ -1,4 +1,5 @@
 from __future__ import annotations
+from typing import Self
 import math
 import numpy as np
 from numpy import ndarray
@@ -27,49 +28,46 @@ class Linear_Operator_KV(Linear_Operator_KV_ABC):
         """
         self.matrix = operator_matrix
 
-    def apply(self, vector: Vector_KV):
+    def apply(self, vector: Vector_KV) -> Vector_KV:
         return Vector_KV(coordinates=np.transpose(np.matmul(self.matrix, np.transpose(vector.coordinates))))
 
 
 class Vector_KV(Vector_KV_ABC):
-    # scalar_multiplying = Bilinear_Function_KV(np.identity(3))
-
     def __init__(self, coordinates: ndarray):
         """
-        Конструктор класса векторов E
-        :param coordinates: координаты вектора !в стандартном ОНБ!
+        Конструктор класса векторов n-мерного Евклидового пространства в стандартном ОНБ
+        :param coordinates: координаты вектора (в стандартном ОНБ)
         """
         self.coordinates = coordinates
-        self.scalar_multiplying = Bilinear_Function_KV(np.identity(len(coordinates)))
-        # self.vector_multiplying_operator = Linear_Operator_KV(np.array([
-        #     [0, -coordinates[2], coordinates[1]],
-        #     [coordinates[2], 0, -coordinates[0]],
-        #     [-coordinates[1], coordinates[0], 0]
-        # ]))
 
-    def __add__(self, other: Vector_KV) -> Vector_KV:
+        # Матрица скалярного произведения единичная ↓
+        self.scalar_multiplying = Bilinear_Function_KV(np.identity(len(coordinates)))
+
+    def __add__(self, other: Self) -> Self:
         return Vector_KV(self.coordinates + other.coordinates)
 
-    def __neg__(self):
+    def __neg__(self) -> Self:
         return Vector_KV(-self.coordinates)
 
-    def __mul__(self, other: float | Vector_KV) -> float | Vector_KV:
+    def __mul__(self, other: Self | float) -> float | Self:
         if isinstance(other, Vector_KV):
             return self.scalar_multiplying.apply(self, other)
 
         elif isinstance(other, float | int):
             return Vector_KV(self.coordinates * other)
 
+        raise TypeError("Unsupported operand type")
+
     def __abs__(self) -> float:
         return math.sqrt(self * self)
 
-    def angle(self, other: Vector_KV) -> float:
+    def angle(self, other: Self) -> float:
         return math.acos((self * other) / (abs(self) * abs(other)))
 
-    # def vector_mul(self, other: VectorE3_KV) -> VectorE3_KV:
-    #     return self.vector_multiplying_operator.apply(other)
+    def scale(self, scalar: float) -> Self:
+        if scalar == 0:
+            raise ZeroDivisionError
 
-    def scale(self, scalar: float) -> Vector_KV:
         self.coordinates *= (1 / scalar)
         return self
 
