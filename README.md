@@ -1,7 +1,7 @@
 # manim_linalg
 
 
-<video> autoplay loop muted playsinline>
+<video autoplay loop muted playsinline>
     <source src="gifs/TriangleScene_1.mp4" type="video/mp4">
 </video>
 
