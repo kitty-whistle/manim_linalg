@@ -1,7 +1,10 @@
 # manim_linalg
 
 
-![текст](gifs/TriangleScene_1_ManimCE_v0.20.1.gif)
+<video> autoplay loop muted playsinline>
+    <source src="gifs/TriangleScene_1.mp4" type="video/mp4">
+</video>
+
 ```python
 from utils_2D import *
 
