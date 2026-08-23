@@ -1,8 +1,8 @@
 # manim_linalg
 
 
-<video autoplay loop muted playsinline>
-    <source src="gifs/TriangleScene_1.mp4" type="video/mp4">
+<video autoplay loop muted playsinline width="100%">
+  <source src="https://kitty-whistle.github.io/manim_linalg/gifs/TriangleScene_1.mp4" type="video/mp4">
 </video>
 
 ```python
