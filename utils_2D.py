@@ -162,8 +162,8 @@ class TriangleE2:
         self.BC = LineE2(self.B, self.C)
         self.AC = LineE2(self.A, self.C)
 
-        self.opposite_sides = {self.A: self.BC, self.B: self.AC, self.C: self.AB}
-        self.adjacent_sides = {self.A: [self.AB, self.AC], self.B: [self.BC, -self.AB], self.C: [-self.AC, -self.BC]}
+        self.opposite_sides = {tuple(self.A): self.BC, tuple(self.B): self.AC, tuple(self.C): self.AB}
+        self.adjacent_sides = {tuple(self.A): [self.AB, self.AC], tuple(self.B): [self.BC, -self.AB], tuple(self.C): [-self.AC, -self.BC]}
 
     @property
     def perimeter(self) -> float:
