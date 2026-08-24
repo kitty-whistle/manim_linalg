@@ -1,0 +1,355 @@
+from __future__ import annotations
+
+from KV import *
+from numpy import ndarray
+import math
+from manim import *
+
+
+class LineE2:
+    def __init__(self, start_point: ndarray, end_point: ndarray):
+        """
+        Конструктор класса линий (т.е отрезков прямой) в двумерном Евклидовом пространстве
+        :param start_point: начальная точка R^2, т.е (x, y)
+        :param end_point: конечная точка R^2, т.е (x, y)
+        """
+        self.start_point = start_point
+        self.end_point = end_point
+
+        # Ненормированный вектор, соединяющий две точки (т.е направленный отрезок прямой) ↓
+        self.direction_vector = Vector_KV(coordinates=self.end_point - self.start_point)
+
+        # Нормированный вектор нормали (для составления уравнения прямой в E^2) ↓
+        self.normal_vector = self.rotation_operator_by_angle(math.pi / 2).apply(self.direction_vector).normalize()
+
+        # Свободный член уравнения прямой в E^2 (Ax + By + C = 0, C := self.free_member)
+        self.free_member = - self.normal_vector.coordinates[0] * self.start_point[0] - self.normal_vector.coordinates[1] * self.start_point[1]
+
+    @property
+    def center(self):
+        return (self.start_point + self.end_point) / 2
+
+    @staticmethod
+    def make_R3(point: ndarray) -> ndarray:
+        """
+        Преобразование точки R^2 в R^3 (для корректной работы manim в 2D)
+        :param point: Точка в R^2
+        :return: Точка в R^3
+        """
+        return np.array([point[0], point[1], 0.0])
+
+    @property
+    def start_manim(self) -> ndarray:
+        """
+        Преобразование start_point R^2 в R^3 (для корректной работы manim в 2D)
+        :return: точка R^3
+        """
+        return self.make_R3(self.start_point)
+
+    @property
+    def end_manim(self):
+        """
+        Преобразование end_point R^2 в R^3 (для корректной работы manim в 2D)
+        :return: точка R^3
+        """
+        return self.make_R3(self.end_point)
+
+    @staticmethod
+    def rotation_operator_by_angle(angle: float) -> Linear_Operator_KV:
+        """
+        Создание ортогонального оператора для поворота вектора E^2 на угол angle
+        :param angle: угол поворота (против часовой стрелки)
+        :return: Ортогональный оператор поворота
+        """
+        return Linear_Operator_KV(np.array([
+            [round(math.cos(angle), 10), -round(math.sin(angle), 10)],
+            [round(math.sin(angle), 10), round(math.cos(angle), 10)]
+        ]))
+
+    def intersection(self, other: Self) -> ndarray:
+        """
+        Выискивание пересечения двух линий (возможно их продолжений) методом Крамера
+        :param other: линия
+        :return: точка в R^2
+        """
+        x_matrix = np.array([
+            [-self.free_member, self.normal_vector.coordinates[1]],
+            [-other.free_member, other.normal_vector.coordinates[1]],
+        ])
+
+        y_matrix = np.array([
+            [self.normal_vector.coordinates[0], -self.free_member],
+            [other.normal_vector.coordinates[0], -other.free_member],
+        ])
+
+        system_matrix = np.array([
+            [self.normal_vector.coordinates[0], self.normal_vector.coordinates[1]],
+            [other.normal_vector.coordinates[0], other.normal_vector.coordinates[1]],
+        ])
+
+        if np.linalg.det(system_matrix) == 0:
+            raise ZeroDivisionError("Determinant is zero (Lines are parallel)")
+        return np.array([np.linalg.det(x_matrix) / np.linalg.det(system_matrix), np.linalg.det(y_matrix) / np.linalg.det(system_matrix)])
+
+    def line_by_angle(self, angle: float, start_point: ndarray, length_scale: float) -> Self:
+        """
+        Выискивание линии длины length_scale, имеющей с данной линией заданный угол angle в E^2
+        :param length_scale: длина линии
+        :param angle: заданный угол
+        :param start_point: начальная точка новой линии
+        :return: линия в E^2
+        """
+        rotation_operator = self.rotation_operator_by_angle(angle)
+        new_normal_vector = rotation_operator.apply(self.normal_vector).normalize()
+        new_direction_vector = self.rotation_operator_by_angle(math.pi/2).apply(new_normal_vector).normalize()
+        return LineE2(start_point, start_point + (new_direction_vector * length_scale).coordinates)
+
+    def angle(self, other: Self) -> float:
+        """
+        Операция измерения угла между направляющими векторами линий self и other
+        :param other:
+        :return:
+        """
+        return self.normal_vector.angle(other.normal_vector)
+
+    def get_Line(self, **kwargs) -> Line:
+        """
+        Перевод объекта класса LineE2 в объект класса manim.mobject.geometry.line.Line
+        :param kwargs: кастомизация (manim)
+        :return: manim.mobject.geometry.line.Line
+        """
+        return Line(start=self.start_manim, end=self.end_manim, **kwargs)
+
+    def get_Arrow(self, **kwargs) -> Arrow:
+        """
+        Перевод объекта класса LineE2 в объект класса manim.mobject.geometry.arrow.Arrow
+        :param kwargs: кастомизация (manim)
+        :return: manim.mobject.geometry.arrow.Arrow
+        """
+        return Arrow(start=self.start_manim, end=self.end_manim, **kwargs)
+
+    def scale(self, scalar: float) -> Self:
+        """
+        Операция увеличения длины линии в scalar раз по обеим направлениям
+        :param scalar: Число раз, в которое увеличивается линия
+        :return: Линия
+        """
+        return LineE2(self.start_point - (self.direction_vector * scalar).coordinates, self.start_point + (self.direction_vector * scalar).coordinates)
+
+    def __neg__(self) -> Self:
+        """
+        Получение линии с противоположным направляющим вектором (direction_vector)
+        :return:
+        """
+        return LineE2(self.end_point, self.start_point)
+
+    def __abs__(self) -> float:
+        """
+        Операция измерения длины линии (длины направляющего вектора direction_vector)
+        :return: Число
+        """
+        return abs(self.direction_vector)
+
+
+class TriangleE2:
+    def __init__(self, A: ndarray, B: ndarray, C: ndarray):
+        """
+        Конструктор класса треугольников в двумерном Евклидовом пространстве
+        :param A: Первая вершина (точка в R^2)
+        :param B: Вторая вершина (точка в R^2)
+        :param C: Третья вершина (точка в R^2)
+        """
+        self.A = A
+        self.B = B
+        self.C = C
+        self.AB = LineE2(self.A, self.B)
+        self.BC = LineE2(self.B, self.C)
+        self.AC = LineE2(self.A, self.C)
+
+        self.opposite_sides = {tuple(self.A): self.BC, tuple(self.B): self.AC, tuple(self.C): self.AB}
+        self.adjacent_sides = {tuple(self.A): [self.AB, self.AC], tuple(self.B): [-self.AB, self.BC], tuple(self.C): [-self.AC, -self.BC]}
+
+    @property
+    def perimeter(self) -> float:
+        """
+        Вычисление периметра треугольника
+        :return: Периметр
+        """
+        return abs(self.AB) + abs(self.BC) + abs(self.AC)
+
+    @property
+    def area(self) -> float:
+        """
+        Вычисление площади треугольника
+        :return: Площадь
+        """
+        return 0.5 * abs(self.height(self.B)) * abs(self.AC)
+
+    @property
+    def incenter(self) -> ndarray:
+        """
+        Вычисление координаты центра вписанной окружности треугольника
+        :return: Точка R^2
+        """
+        return self.bisector(self.A).intersection(self.bisector(self.B))
+
+    @property
+    def inscribed_radius(self) -> float:
+        """
+        Вычисление радиуса вписанной окружности треугольника
+        :return: Длина радиуса
+        """
+        return 2 * self.area / self.perimeter
+
+    @property
+    def centroid(self) -> ndarray:
+        """
+        Вычисление координаты центра масс треугольника
+        :return: Точка R^2
+        """
+        return self.median(self.A).intersection(self.median(self.B))
+
+    @property
+    def orthocenter(self) -> ndarray:
+        """
+        Вычисление координаты ортоцентра треугольника
+        :return: Точка R^2
+        """
+        return self.height(self.A).intersection(self.height(self.B))
+
+    @property
+    def circumscribed_center(self) -> ndarray:
+        """
+        Вычисление центра описанной вокруг треугольника окружности
+        :return: Точка R^2
+        """
+        AB_center = self.AB.get_Line().get_center()[0:2]
+        BC_center = self.BC.get_Line().get_center()[0:2]
+
+        median_perpendicular_normalized_AB = self.AB.line_by_angle(math.pi/2, AB_center, 1)
+        median_perpendicular_normalized_BC = self.BC.line_by_angle(math.pi/2, BC_center, 1)
+        return median_perpendicular_normalized_AB.intersection(median_perpendicular_normalized_BC)
+
+    @property
+    def circumscribed_radius(self) -> float:
+        """
+        Вычисление радиуса описанной вокруг треугольника окружности
+        :return: Длина радиуса описанной окружности
+        """
+        return abs(LineE2(self.A, self.circumscribed_center))
+
+    def height(self, vertex: ndarray) -> LineE2:
+        """
+        Построение высоты треугольника из указанной вершины
+        :param vertex: Вершина треугольника, из которой проводится высота (точка R^2)
+        :return: Высота (линия LineE2)
+        """
+        opposite_side = self.opposite_sides[tuple(vertex)]
+        normal_line_unnormalized = opposite_side.line_by_angle(math.pi / 2, vertex, 1)
+        end_point = normal_line_unnormalized.intersection(opposite_side)
+        return LineE2(vertex, end_point)
+
+    def bisector(self, vertex: ndarray) -> LineE2:
+        """
+        Построение биссектрисы треугольника из указанной вершины
+        :param vertex: Вершина треугольника, из которой проводится биссектриса (точка R^2)
+        :return: Биссектриса (линия LineE2)
+        """
+        adjacent_side_1 = self.adjacent_sides[tuple(vertex)][0]
+        adjacent_side_2 = self.adjacent_sides[tuple(vertex)][1]
+        opposite_side = self.opposite_sides[tuple(vertex)]
+
+        angle_value = adjacent_side_1.angle(adjacent_side_2) / 2
+
+        # Откладываем угол от первой прилежащей стороны против часовой стрелки ↓
+        bisector_line_unnormalized_1 = adjacent_side_1.line_by_angle(angle_value, vertex, 1)
+        end_point_1 = bisector_line_unnormalized_1.intersection(opposite_side)
+
+        # Откладываем угол от второй прилежащей стороны против часовой стрелки ↓
+        bisector_line_unnormalized_2 = adjacent_side_2.line_by_angle(angle_value, vertex, 1)
+        end_point_2 = bisector_line_unnormalized_2.intersection(opposite_side)
+
+        # Два варианта биссектрисы ↓
+        bis_1 = LineE2(vertex, end_point_1)
+        bis_2 = LineE2(vertex, end_point_2)
+
+        # Проверяем на корректность ↓
+        if round(bis_1.angle(adjacent_side_1), 3) == round(bis_1.angle(adjacent_side_2), 3):
+            return bis_1
+        return bis_2
+
+    def median(self, vertex: ndarray) -> LineE2:
+        """
+        Построение медианы треугольника из указанной вершины
+        :param vertex: Вершина треугольника, из которой проводится медиана (точка R^2)
+        :return: Медиана (линия LineE2)
+        """
+        opposite_side = self.opposite_sides[tuple(vertex)]
+        return LineE2(vertex, opposite_side.center)
+
+    def unsigned_circle_center(self, vertex: ndarray) -> ndarray:
+        """
+        Вычисление координаты центра вневписанной окружности треугольника, построенной на угле с вершиной vertex
+        :param vertex: Вершина треугольника, на угле которой построена окружность (точка R^2)
+        :return: Точка R^2
+        """
+        adjacent_side_1 = self.adjacent_sides[tuple(vertex)][0]
+        opposite_side = self.opposite_sides[tuple(vertex)]
+
+        angle_value = adjacent_side_1.angle(opposite_side) / 2
+
+        # Откладываем угол от первой прилежащей стороны против часовой стрелки ↓
+        bis_1 = adjacent_side_1.line_by_angle(angle_value, adjacent_side_1.end_point, 1)
+
+        # Откладываем угол от противолежащей стороны против часовой стрелки ↓
+        bis_2 = opposite_side.line_by_angle(angle_value, adjacent_side_1.end_point, 1)
+
+        # Проверяем на корректность ↓
+        if round(bis_1.angle(opposite_side), 3) == round(bis_1.angle(adjacent_side_1), 3):
+            return bis_1.intersection(self.bisector(vertex))
+        return bis_2.intersection(self.bisector(vertex))
+
+    def unsigned_circle_radius(self, vertex: ndarray) -> float:
+        """
+        Вычисление радиуса вневписанной окружности треугольника, построенной на угле с вершиной vertex
+        :param vertex: Вершина треугольника, на угле которой построена окружность (точка R^2)
+        :return: Длина радиуса
+        """
+        return self.area / (0.5 * self.perimeter - abs(self.opposite_sides[tuple(vertex)].direction_vector))
+
+
+if __name__ == "__main__":
+    # dot_kwargs = {"radius": 0.05, "fill_color": BLUE, "stroke_color": BLACK, "stroke_width": 2, "z_index": 1}
+    # line_kwargs = {"stroke_color": GREY, "stroke_opacity": 1, "stroke_width": 4, "z_index": 0}
+    # tex_kwargs = {"font_size": 25, "z_index": 1}
+    #
+    # A, B, C = np.array([-3, -2, 0]), np.array([3, -1, 0]), np.array([4, 3, 0])
+    # A_dot, B_dot, C_dot = Dot(**dot_kwargs).move_to(A), Dot(**dot_kwargs).move_to(B), Dot(**dot_kwargs).move_to(C)
+    # A_tex, B_tex, C_tex = Tex("A", **tex_kwargs).next_to(A, DOWN), Tex("B", **tex_kwargs).next_to(B, DOWN), Tex("C",
+    #                                                                                                             **tex_kwargs).next_to(
+    #     C, RIGHT)
+    # triangleE2 = TriangleE2(A=A[0:2], B=B[0:2], C=C[0:2])
+    # vertex = A[0:2]
+    #
+    # adjacent_side_1 = triangleE2.adjacent_sides[tuple(vertex)][0]
+    # adjacent_side_2 = triangleE2.adjacent_sides[tuple(vertex)][1]
+    # opposite_side = triangleE2.opposite_sides[tuple(vertex)]
+    #
+    # angle_value = adjacent_side_1.angle(opposite_side) / 2
+    #
+    # # Откладываем угол от первой прилежащей стороны против часовой стрелки ↓
+    # bisector_line_unnormalized_1 = adjacent_side_1.line_by_angle(angle_value, vertex, 1)
+    # end_point_1 = bisector_line_unnormalized_1.intersection(opposite_side)
+    #
+    # # Откладываем угол от второй прилежащей стороны против часовой стрелки ↓
+    # bisector_line_unnormalized_2 = adjacent_side_2.line_by_angle(angle_value, vertex, 1)
+    # end_point_2 = bisector_line_unnormalized_2.intersection(opposite_side)
+    #
+    # # Два варианта биссектрисы ↓
+    # bis_1 = LineE2(vertex, end_point_1)
+    # bis_2 = LineE2(vertex, end_point_2)
+    #
+    # print(bis_2.angle(adjacent_side_1), bis_2.angle(adjacent_side_2))
+    # # if round(bis_1.angle(adjacent_side_1), 3) == round(bis_1.angle(adjacent_side_2), 3):
+    pass
+

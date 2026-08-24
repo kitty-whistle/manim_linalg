@@ -1,14 +1,16 @@
-# Manim Linalg
-Аддон manim для упрощения построений 
-
-## Некоторые примеры: 
-![BasicTriangle.gif](gifs/BasicTriangle.gif)
-```python
 from utils_2D import *
 
+# ----- Шаблоны кастомизации геометрических объектов на сцене ↓ ----- #
 dot_kwargs = {"radius": 0.05, "fill_color": BLUE, "stroke_color": BLACK, "stroke_width": 2, "z_index": 1}
-tex_kwargs = {"font_size": 25, "z_index": 1}
+moving_dot_kwargs = {"radius": 0.05, "fill_color": YELLOW, "stroke_color": BLACK, "stroke_width": 2, "z_index": 1}
 line_kwargs = {"stroke_color": GREY, "stroke_opacity": 1, "stroke_width": 4, "z_index": 0}
+dash_kwargs = {"stroke_opacity": 1, "stroke_width": 2.5, "z_index": 1}
+right_angle_kwargs = {"length": 0.2, "stroke_color": BLUE, "stroke_opacity": 0.8, "stroke_width": 2.5, "z_index": -1}
+angle_kwargs = {"stroke_color": BLUE, "stroke_opacity": 0.8, "stroke_width": 2.5, "z_index": -1}
+angle_kwargs_an = {"stroke_opacity": 0.8, "stroke_width": 2.5, "z_index": -1}
+tex_kwargs = {"font_size": 25, "z_index": 1}
+circle_kwargs = {"stroke_color": PURE_MAGENTA, "stroke_opacity": 1, "stroke_width": 2.5, "z_index": -2}
+# ------------------------------------------------------------------- #
 
 
 class BasicTriangle(MovingCameraScene):
@@ -36,16 +38,6 @@ class BasicTriangle(MovingCameraScene):
         self.play(AnimationGroup(Create(AB_line), Create(BC_line), Create(AC_line)))
         self.wait()
         self.play(FadeOut(*self.mobjects))
-```
-![Median.gif](gifs/Median.gif)
-```python
-from utils_2D import *
-
-dot_kwargs = {"radius": 0.05, "fill_color": BLUE, "stroke_color": BLACK, "stroke_width": 2, "z_index": 1}
-tex_kwargs = {"font_size": 25, "z_index": 1}
-line_kwargs = {"stroke_color": GREY, "stroke_opacity": 1, "stroke_width": 4, "z_index": 0}
-moving_dot_kwargs = {"radius": 0.05, "fill_color": YELLOW, "stroke_color": BLACK, "stroke_width": 2, "z_index": 1}
-dash_kwargs = {"stroke_opacity": 1, "stroke_width": 2.5, "z_index": 1}
 
 
 class Median(MovingCameraScene):
@@ -122,18 +114,6 @@ class Median(MovingCameraScene):
         self.play(DrawBorderThenFill(centroid_dot))
         self.wait()
         self.play(FadeOut(*self.mobjects))
-```
-
-![Height.gif](gifs/Height.gif)
-```python
-from utils_2D import *
-
-dot_kwargs = {"radius": 0.05, "fill_color": BLUE, "stroke_color": BLACK, "stroke_width": 2, "z_index": 1}
-tex_kwargs = {"font_size": 25, "z_index": 1}
-line_kwargs = {"stroke_color": GREY, "stroke_opacity": 1, "stroke_width": 4, "z_index": 0}
-moving_dot_kwargs = {"radius": 0.05, "fill_color": YELLOW, "stroke_color": BLACK, "stroke_width": 2, "z_index": 1}
-angle_kwargs = {"stroke_color": BLUE, "stroke_opacity": 0.8, "stroke_width": 2.5, "z_index": -1}
-
 
 
 class Height(MovingCameraScene):
@@ -204,17 +184,6 @@ class Height(MovingCameraScene):
         self.play(DrawBorderThenFill(orthocenter_dot))
         self.wait()
         self.play(FadeOut(*self.mobjects))
-```
-![Bisector.gif](gifs/Bisector.gif)
-```python
-from utils_2D import *
-
-dot_kwargs = {"radius": 0.05, "fill_color": BLUE, "stroke_color": BLACK, "stroke_width": 2, "z_index": 1}
-tex_kwargs = {"font_size": 25, "z_index": 1}
-line_kwargs = {"stroke_color": GREY, "stroke_opacity": 1, "stroke_width": 4, "z_index": 0}
-angle_kwargs_an = {"stroke_opacity": 0.8, "stroke_width": 2.5, "z_index": -1}
-moving_dot_kwargs = {"radius": 0.05, "fill_color": YELLOW, "stroke_color": BLACK, "stroke_width": 2, "z_index": 1}
-circle_kwargs = {"stroke_color": PURE_MAGENTA, "stroke_opacity": 1, "stroke_width": 2.5, "z_index": -2}
 
 
 class Bisector(MovingCameraScene):
@@ -304,17 +273,6 @@ class Bisector(MovingCameraScene):
     @staticmethod
     def triangleE2(A_dot: Dot, B_dot: Dot, C_dot: Dot):
         return TriangleE2(A=A_dot.get_center()[0:2], B=B_dot.get_center()[0:2], C=C_dot.get_center()[0:2])
-```
-
-![Bisector.gif](gifs/TriangleCircles.gif)
-```python
-from utils_2D import *
-
-dot_kwargs = {"radius": 0.05, "fill_color": BLUE, "stroke_color": BLACK, "stroke_width": 2, "z_index": 1}
-tex_kwargs = {"font_size": 25, "z_index": 1}
-line_kwargs = {"stroke_color": GREY, "stroke_opacity": 1, "stroke_width": 4, "z_index": 0}
-circle_kwargs = {"stroke_color": PURE_MAGENTA, "stroke_opacity": 1, "stroke_width": 2.5, "z_index": -2}
-moving_dot_kwargs = {"radius": 0.05, "fill_color": YELLOW, "stroke_color": BLACK, "stroke_width": 2, "z_index": 1}
 
 
 class TriangleCircles(MovingCameraScene):
@@ -363,4 +321,3 @@ class TriangleCircles(MovingCameraScene):
     @staticmethod
     def triangleE2(A_dot: Dot, B_dot: Dot, C_dot: Dot):
         return TriangleE2(A=A_dot.get_center()[0:2], B=B_dot.get_center()[0:2], C=C_dot.get_center()[0:2])
-```
