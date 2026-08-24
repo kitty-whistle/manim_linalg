@@ -25,6 +25,10 @@ class LineE2:
         # Свободный член уравнения прямой в E^2 (Ax + By + C = 0, C := self.free_member)
         self.free_member = - self.normal_vector.coordinates[0] * self.start_point[0] - self.normal_vector.coordinates[1] * self.start_point[1]
 
+    @property
+    def center(self):
+        return (self.start_point + self.end_point) / 2
+
     @staticmethod
     def make_R3(point: ndarray) -> ndarray:
         """
@@ -126,11 +130,11 @@ class LineE2:
 
     def scale(self, scalar: float) -> Self:
         """
-        Операция увеличения длины направляющего вектора (длины линии вдоль направления direction_vector) в scalar раз с сохранением направления
+        Операция увеличения длины линии в scalar раз по обеим направлениям
         :param scalar: Число раз, в которое увеличивается линия
         :return: Линия
         """
-        return LineE2(self.start_point, self.start_point + (self.direction_vector * scalar).coordinates)
+        return LineE2(self.start_point - (self.direction_vector * scalar).coordinates, self.start_point + (self.direction_vector * scalar).coordinates)
 
     def __neg__(self) -> Self:
         """
@@ -151,19 +155,19 @@ class TriangleE2:
     def __init__(self, A: ndarray, B: ndarray, C: ndarray):
         """
         Конструктор класса треугольников в двумерном Евклидовом пространстве
-        :param A: Первая вершина
-        :param B: Вторая вершина
-        :param C: Третья вершина
+        :param A: Первая вершина (точка в R^2)
+        :param B: Вторая вершина (точка в R^2)
+        :param C: Третья вершина (точка в R^2)
         """
-        self.A = A[0:2]
-        self.B = B[0:2]
-        self.C = C[0:2]
+        self.A = A
+        self.B = B
+        self.C = C
         self.AB = LineE2(self.A, self.B)
         self.BC = LineE2(self.B, self.C)
         self.AC = LineE2(self.A, self.C)
 
         self.opposite_sides = {tuple(self.A): self.BC, tuple(self.B): self.AC, tuple(self.C): self.AB}
-        self.adjacent_sides = {tuple(self.A): [self.AB, self.AC], tuple(self.B): [self.BC, -self.AB], tuple(self.C): [-self.AC, -self.BC]}
+        self.adjacent_sides = {tuple(self.A): [self.AB, self.AC], tuple(self.B): [-self.AB, self.BC], tuple(self.C): [-self.AC, -self.BC]}
 
     @property
     def perimeter(self) -> float:
@@ -240,7 +244,7 @@ class TriangleE2:
         :param vertex: Вершина треугольника, из которой проводится высота (точка R^2)
         :return: Высота (линия LineE2)
         """
-        opposite_side = self.opposite_sides[vertex]
+        opposite_side = self.opposite_sides[tuple(vertex)]
         normal_line_unnormalized = opposite_side.line_by_angle(math.pi / 2, vertex, 1)
         end_point = normal_line_unnormalized.intersection(opposite_side)
         return LineE2(vertex, end_point)
@@ -251,11 +255,11 @@ class TriangleE2:
         :param vertex: Вершина треугольника, из которой проводится биссектриса (точка R^2)
         :return: Биссектриса (линия LineE2)
         """
-        adjacent_side_1 = self.adjacent_sides[vertex][0]
-        adjacent_side_2 = self.adjacent_sides[vertex][1]
-        opposite_side = self.opposite_sides[vertex]
+        adjacent_side_1 = self.adjacent_sides[tuple(vertex)][0]
+        adjacent_side_2 = self.adjacent_sides[tuple(vertex)][1]
+        opposite_side = self.opposite_sides[tuple(vertex)]
 
-        angle_value = adjacent_side_1.angle(opposite_side) / 2
+        angle_value = adjacent_side_1.angle(adjacent_side_2) / 2
 
         # Откладываем угол от первой прилежащей стороны против часовой стрелки ↓
         bisector_line_unnormalized_1 = adjacent_side_1.line_by_angle(angle_value, vertex, 1)
@@ -270,7 +274,7 @@ class TriangleE2:
         bis_2 = LineE2(vertex, end_point_2)
 
         # Проверяем на корректность ↓
-        if round(bis_1.angle(adjacent_side_1), 3) == round(bis_2.angle(adjacent_side_2), 3):
+        if round(bis_1.angle(adjacent_side_1), 3) == round(bis_1.angle(adjacent_side_2), 3):
             return bis_1
         return bis_2
 
@@ -280,7 +284,8 @@ class TriangleE2:
         :param vertex: Вершина треугольника, из которой проводится медиана (точка R^2)
         :return: Медиана (линия LineE2)
         """
-        return LineE2(vertex, self.opposite_sides[vertex].get_Line().get_center())
+        opposite_side = self.opposite_sides[tuple(vertex)]
+        return LineE2(vertex, opposite_side.center)
 
     def unsigned_circle_center(self, vertex: ndarray) -> ndarray:
         """
@@ -288,8 +293,8 @@ class TriangleE2:
         :param vertex: Вершина треугольника, на угле которой построена окружность (точка R^2)
         :return: Точка R^2
         """
-        adjacent_side_1 = self.adjacent_sides[vertex][0]
-        opposite_side = self.opposite_sides[vertex]
+        adjacent_side_1 = self.adjacent_sides[tuple(vertex)][0]
+        opposite_side = self.opposite_sides[tuple(vertex)]
 
         angle_value = adjacent_side_1.angle(opposite_side) / 2
 
@@ -310,8 +315,41 @@ class TriangleE2:
         :param vertex: Вершина треугольника, на угле которой построена окружность (точка R^2)
         :return: Длина радиуса
         """
-        return self.area / (0.5 * self.perimeter - abs(self.opposite_sides[vertex].direction_vector))
+        return self.area / (0.5 * self.perimeter - abs(self.opposite_sides[tuple(vertex)].direction_vector))
 
 
 if __name__ == "__main__":
+    # dot_kwargs = {"radius": 0.05, "fill_color": BLUE, "stroke_color": BLACK, "stroke_width": 2, "z_index": 1}
+    # line_kwargs = {"stroke_color": GREY, "stroke_opacity": 1, "stroke_width": 4, "z_index": 0}
+    # tex_kwargs = {"font_size": 25, "z_index": 1}
+    #
+    # A, B, C = np.array([-3, -2, 0]), np.array([3, -1, 0]), np.array([4, 3, 0])
+    # A_dot, B_dot, C_dot = Dot(**dot_kwargs).move_to(A), Dot(**dot_kwargs).move_to(B), Dot(**dot_kwargs).move_to(C)
+    # A_tex, B_tex, C_tex = Tex("A", **tex_kwargs).next_to(A, DOWN), Tex("B", **tex_kwargs).next_to(B, DOWN), Tex("C",
+    #                                                                                                             **tex_kwargs).next_to(
+    #     C, RIGHT)
+    # triangleE2 = TriangleE2(A=A[0:2], B=B[0:2], C=C[0:2])
+    # vertex = A[0:2]
+    #
+    # adjacent_side_1 = triangleE2.adjacent_sides[tuple(vertex)][0]
+    # adjacent_side_2 = triangleE2.adjacent_sides[tuple(vertex)][1]
+    # opposite_side = triangleE2.opposite_sides[tuple(vertex)]
+    #
+    # angle_value = adjacent_side_1.angle(opposite_side) / 2
+    #
+    # # Откладываем угол от первой прилежащей стороны против часовой стрелки ↓
+    # bisector_line_unnormalized_1 = adjacent_side_1.line_by_angle(angle_value, vertex, 1)
+    # end_point_1 = bisector_line_unnormalized_1.intersection(opposite_side)
+    #
+    # # Откладываем угол от второй прилежащей стороны против часовой стрелки ↓
+    # bisector_line_unnormalized_2 = adjacent_side_2.line_by_angle(angle_value, vertex, 1)
+    # end_point_2 = bisector_line_unnormalized_2.intersection(opposite_side)
+    #
+    # # Два варианта биссектрисы ↓
+    # bis_1 = LineE2(vertex, end_point_1)
+    # bis_2 = LineE2(vertex, end_point_2)
+    #
+    # print(bis_2.angle(adjacent_side_1), bis_2.angle(adjacent_side_2))
+    # # if round(bis_1.angle(adjacent_side_1), 3) == round(bis_1.angle(adjacent_side_2), 3):
     pass
+

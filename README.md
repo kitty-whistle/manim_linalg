@@ -2,7 +2,7 @@
 
 
 
-![текст](gifs/TriangleScene_1.gif)
+![TriangleScene_1_ManimCE_v0.20.1.gif](gifs/TriangleScene_1_ManimCE_v0.20.1.gif)![текст](gifs/TriangleScene_1.gif)
 ```python
 from utils_2D import *
 
@@ -10,7 +10,7 @@ from utils_2D import *
 class TriangleScene_1(MovingCameraScene):
     def construct(self):
         dot_kwargs = {"radius": 0.05, "fill_color": BLUE, "stroke_color": BLACK, "stroke_width": 2, "z_index": 1}
-        line_kwargs = {"stroke_color": GREY, "stroke_opacity": 0.8, "stroke_width": 5, "z_index": 0}
+        line_kwargs = {"stroke_color": GREY, "stroke_opacity": 1, "stroke_width": 4, "z_index": 0}
         tex_kwargs = {"font_size": 25, "z_index": 1}
 
         A, B, C = np.array([-3, -2, 0]), np.array([3, -1, 0]), np.array([4, 3, 0])
@@ -23,5 +23,4 @@ class TriangleScene_1(MovingCameraScene):
         self.play(Create(triangleE2.AB.get_Line(**line_kwargs)), Create(triangleE2.BC.get_Line(**line_kwargs)), Create(triangleE2.AC.get_Line(**line_kwargs)))
         self.wait(2)
         self.play(FadeOut(*self.mobjects))
-
 ```
