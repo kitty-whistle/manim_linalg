@@ -1,7 +1,7 @@
-# manim_linalg
+# Manim Linalg
+Аддон manim для упрощения построений 
 
-
-
+## Некоторые примеры: 
 ![BasicTriangle.gif](gifs/BasicTriangle.gif)
 ```python
 from utils_2D import *
@@ -298,6 +298,65 @@ class Bisector(MovingCameraScene):
         self.play(C_dot.animate.shift(5*LEFT), run_time=2)
         self.play(C_dot.animate.shift(5*RIGHT), run_time=2)
 
+        self.wait()
+        self.play(FadeOut(*self.mobjects))
+
+    @staticmethod
+    def triangleE2(A_dot: Dot, B_dot: Dot, C_dot: Dot):
+        return TriangleE2(A=A_dot.get_center()[0:2], B=B_dot.get_center()[0:2], C=C_dot.get_center()[0:2])
+```
+
+![Bisector.gif](gifs/TriangleCircles.gif)
+```python
+from utils_2D import *
+
+dot_kwargs = {"radius": 0.05, "fill_color": BLUE, "stroke_color": BLACK, "stroke_width": 2, "z_index": 1}
+tex_kwargs = {"font_size": 25, "z_index": 1}
+line_kwargs = {"stroke_color": GREY, "stroke_opacity": 1, "stroke_width": 4, "z_index": 0}
+circle_kwargs = {"stroke_color": PURE_MAGENTA, "stroke_opacity": 1, "stroke_width": 2.5, "z_index": -2}
+moving_dot_kwargs = {"radius": 0.05, "fill_color": YELLOW, "stroke_color": BLACK, "stroke_width": 2, "z_index": 1}
+
+
+class TriangleCircles(MovingCameraScene):
+    def construct(self):
+        A = np.array([-4, -2, 0])
+        B = np.array([4, -3, 0])
+        C = np.array([4, 3, 0])
+
+        A_dot = Dot(**dot_kwargs).move_to(A)
+        B_dot = Dot(**dot_kwargs).move_to(B)
+        C_dot = Dot(**dot_kwargs).move_to(C)
+
+        A_tex = always_redraw(lambda: MathTex("A", **tex_kwargs).next_to(A_dot.get_center(), DOWN))
+        B_tex = always_redraw(lambda: MathTex("B", **tex_kwargs).next_to(B_dot.get_center(), UP+RIGHT))
+        C_tex = always_redraw(lambda: MathTex("C", **tex_kwargs).next_to(C_dot.get_center(), RIGHT))
+
+        AB_line = always_redraw(lambda: self.triangleE2(A_dot, B_dot, C_dot).AB.scale(2).get_Line(**line_kwargs))
+        BC_line = always_redraw(lambda: self.triangleE2(A_dot, B_dot, C_dot).BC.scale(2).get_Line(**line_kwargs))
+        AC_line = always_redraw(lambda: self.triangleE2(A_dot, B_dot, C_dot).AC.scale(2).get_Line(**line_kwargs))
+
+        incenter = always_redraw(lambda: Dot(**moving_dot_kwargs).move_to(LineE2.make_R3(self.triangleE2(A_dot, B_dot, C_dot).incenter)))
+        inscribed_circle = always_redraw(lambda: Circle(radius=self.triangleE2(A_dot, B_dot, C_dot).inscribed_radius, **circle_kwargs).move_to(incenter))
+
+        unsigned_center_A = always_redraw(lambda: Dot(**moving_dot_kwargs).move_to(LineE2.make_R3(self.triangleE2(A_dot, B_dot, C_dot).unsigned_circle_center(A_dot.get_center()[0:2]))))
+        unsigned_circle_A = always_redraw(lambda: Circle(radius=self.triangleE2(A_dot, B_dot, C_dot).unsigned_circle_radius(A_dot.get_center()[0:2]), **circle_kwargs).move_to(unsigned_center_A))
+
+        unsigned_center_B = always_redraw(lambda: Dot(**moving_dot_kwargs).move_to(LineE2.make_R3(self.triangleE2(A_dot, B_dot, C_dot).unsigned_circle_center(B_dot.get_center()[0:2]))))
+        unsigned_circle_B = always_redraw(lambda: Circle(radius=self.triangleE2(A_dot, B_dot, C_dot).unsigned_circle_radius(B_dot.get_center()[0:2]), **circle_kwargs).move_to(unsigned_center_B))
+
+        unsigned_center_C = always_redraw(lambda: Dot(**moving_dot_kwargs).move_to(LineE2.make_R3(self.triangleE2(A_dot, B_dot, C_dot).unsigned_circle_center(C_dot.get_center()[0:2]))))
+        unsigned_circle_C = always_redraw(lambda: Circle(radius=self.triangleE2(A_dot, B_dot, C_dot).unsigned_circle_radius(C_dot.get_center()[0:2]), **circle_kwargs).move_to(unsigned_center_C))
+
+        self.add(A_dot, B_dot, C_dot, A_tex, B_tex, C_tex, AB_line, BC_line, AC_line)
+        self.wait()
+        self.play(self.camera.frame.animate.scale(4))
+        self.wait()
+        self.play(AnimationGroup(DrawBorderThenFill(incenter), DrawBorderThenFill(unsigned_center_A), DrawBorderThenFill(unsigned_center_B), DrawBorderThenFill(unsigned_center_C)))
+        self.play(AnimationGroup(Create(inscribed_circle), Create(unsigned_circle_A), Create(unsigned_circle_C), Create(unsigned_circle_B)))
+        self.play(A_dot.animate.shift(5*LEFT), B_dot.animate.shift(5*RIGHT), C_dot.animate.shift(5*UP), run_time=2)
+        self.play(A_dot.animate.shift(5*RIGHT), B_dot.animate.shift(5*LEFT), C_dot.animate.shift(5*DOWN), run_time=2)
+        self.play(A_dot.animate.shift(5*RIGHT), B_dot.animate.shift(5*RIGHT), run_time=2)
+        self.play(A_dot.animate.shift(5*LEFT), B_dot.animate.shift(5*LEFT), run_time=2)
         self.wait()
         self.play(FadeOut(*self.mobjects))
 

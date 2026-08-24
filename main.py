@@ -275,40 +275,49 @@ class Bisector(MovingCameraScene):
         return TriangleE2(A=A_dot.get_center()[0:2], B=B_dot.get_center()[0:2], C=C_dot.get_center()[0:2])
 
 
-class MovingCircles(MovingCameraScene):
+class TriangleCircles(MovingCameraScene):
     def construct(self):
-        A, B, C = np.array([-4, -2, 0]), np.array([4, -3, 0]), np.array([4, 3, 0])
-        A_dot, B_dot, C_dot = Dot(**dot_kwargs).move_to(A), Dot(**dot_kwargs).move_to(B), Dot(**dot_kwargs).move_to(C)
-        A_tex, B_tex, C_tex = Tex("A", **tex_kwargs).next_to(A, DOWN), Tex("B", **tex_kwargs).next_to(B, DOWN), Tex("C", **tex_kwargs).next_to(C, RIGHT)
+        A = np.array([-4, -2, 0])
+        B = np.array([4, -3, 0])
+        C = np.array([4, 3, 0])
 
-        # triangleE2_redraw = TriangleE2(A=A_dot.get_center()[0:2], B=B_dot.get_center()[0:2], C=C_dot.get_center()[0:2])
+        A_dot = Dot(**dot_kwargs).move_to(A)
+        B_dot = Dot(**dot_kwargs).move_to(B)
+        C_dot = Dot(**dot_kwargs).move_to(C)
 
-        incenter_redraw = always_redraw(lambda: Dot(**moving_dot_kwargs).move_to(LineE2.make_R3(TriangleE2(A=A_dot.get_center()[0:2], B=B_dot.get_center()[0:2], C=C_dot.get_center()[0:2]).incenter)))
-        # circumscribed_center_redraw = always_redraw(lambda: Dot(**moving_dot_kwargs).move_to(LineE2.make_R3(TriangleE2(A=A_dot.get_center()[0:2], B=B_dot.get_center()[0:2], C=C_dot.get_center()[0:2]).circumscribed_center)))
-        inscribed_circle_redraw = always_redraw(lambda: Circle(radius=TriangleE2(A=A_dot.get_center()[0:2], B=B_dot.get_center()[0:2], C=C_dot.get_center()[0:2]).inscribed_radius, **circle_kwargs).move_to(incenter_redraw))
-        #circumscribed_circle_redraw = always_redraw(lambda: Circle(radius=TriangleE2(A=A_dot.get_center()[0:2], B=B_dot.get_center()[0:2], C=C_dot.get_center()[0:2]).circumscribed_radius, **circle_kwargs).move_to(circumscribed_center_redraw))
+        A_tex = always_redraw(lambda: MathTex("A", **tex_kwargs).next_to(A_dot.get_center(), DOWN))
+        B_tex = always_redraw(lambda: MathTex("B", **tex_kwargs).next_to(B_dot.get_center(), UP+RIGHT))
+        C_tex = always_redraw(lambda: MathTex("C", **tex_kwargs).next_to(C_dot.get_center(), RIGHT))
 
-        unsigned_center_A_redraw = always_redraw(lambda: Dot(**moving_dot_kwargs).move_to(LineE2.make_R3(TriangleE2(A=A_dot.get_center()[0:2], B=B_dot.get_center()[0:2], C=C_dot.get_center()[0:2]).unsigned_circle_center(A_dot.get_center()[0:2]))))
-        unsigned_circle_A_redraw = always_redraw(lambda: Circle(radius=TriangleE2(A=A_dot.get_center()[0:2], B=B_dot.get_center()[0:2], C=C_dot.get_center()[0:2]).unsigned_circle_radius(A_dot.get_center()[0:2]), **circle_kwargs).move_to(unsigned_center_A_redraw))
+        AB_line = always_redraw(lambda: self.triangleE2(A_dot, B_dot, C_dot).AB.scale(2).get_Line(**line_kwargs))
+        BC_line = always_redraw(lambda: self.triangleE2(A_dot, B_dot, C_dot).BC.scale(2).get_Line(**line_kwargs))
+        AC_line = always_redraw(lambda: self.triangleE2(A_dot, B_dot, C_dot).AC.scale(2).get_Line(**line_kwargs))
 
-        unsigned_center_B_redraw = always_redraw(lambda: Dot(**moving_dot_kwargs).move_to(LineE2.make_R3(TriangleE2(A=A_dot.get_center()[0:2], B=B_dot.get_center()[0:2], C=C_dot.get_center()[0:2]).unsigned_circle_center(B_dot.get_center()[0:2]))))
-        unsigned_circle_B_redraw = always_redraw(lambda: Circle(radius=TriangleE2(A=A_dot.get_center()[0:2], B=B_dot.get_center()[0:2], C=C_dot.get_center()[0:2]).unsigned_circle_radius(B_dot.get_center()[0:2]), **circle_kwargs).move_to(unsigned_center_B_redraw))
+        incenter = always_redraw(lambda: Dot(**moving_dot_kwargs).move_to(LineE2.make_R3(self.triangleE2(A_dot, B_dot, C_dot).incenter)))
+        inscribed_circle = always_redraw(lambda: Circle(radius=self.triangleE2(A_dot, B_dot, C_dot).inscribed_radius, **circle_kwargs).move_to(incenter))
 
-        unsigned_center_C_redraw = always_redraw(lambda: Dot(**moving_dot_kwargs).move_to(LineE2.make_R3(TriangleE2(A=A_dot.get_center()[0:2], B=B_dot.get_center()[0:2], C=C_dot.get_center()[0:2]).unsigned_circle_center(C_dot.get_center()[0:2]))))
-        unsigned_circle_C_redraw = always_redraw(lambda: Circle(radius=TriangleE2(A=A_dot.get_center()[0:2], B=B_dot.get_center()[0:2], C=C_dot.get_center()[0:2]).unsigned_circle_radius(C_dot.get_center()[0:2]), **circle_kwargs).move_to(unsigned_center_C_redraw))
-        AB_redraw = always_redraw(lambda: TriangleE2(A=A_dot.get_center()[0:2], B=B_dot.get_center()[0:2], C=C_dot.get_center()[0:2]).AB.scale(2).get_Line(**line_kwargs))
-        BC_redraw = always_redraw(lambda: TriangleE2(A=A_dot.get_center()[0:2], B=B_dot.get_center()[0:2], C=C_dot.get_center()[0:2]).BC.scale(2).get_Line(**line_kwargs))
-        AC_redraw = always_redraw(lambda: TriangleE2(A=A_dot.get_center()[0:2], B=B_dot.get_center()[0:2], C=C_dot.get_center()[0:2]).AC.scale(2).get_Line(**line_kwargs))
+        unsigned_center_A = always_redraw(lambda: Dot(**moving_dot_kwargs).move_to(LineE2.make_R3(self.triangleE2(A_dot, B_dot, C_dot).unsigned_circle_center(A_dot.get_center()[0:2]))))
+        unsigned_circle_A = always_redraw(lambda: Circle(radius=self.triangleE2(A_dot, B_dot, C_dot).unsigned_circle_radius(A_dot.get_center()[0:2]), **circle_kwargs).move_to(unsigned_center_A))
 
-        self.play(DrawBorderThenFill(A_dot), DrawBorderThenFill(B_dot), DrawBorderThenFill(C_dot))
-        self.play(Create(AB_redraw), Create(BC_redraw), Create(AC_redraw), run_time=2)
-        self.wait(2)
-        self.play(DrawBorderThenFill(incenter_redraw), DrawBorderThenFill(unsigned_center_A_redraw), DrawBorderThenFill(unsigned_center_B_redraw), DrawBorderThenFill(unsigned_center_C_redraw))
+        unsigned_center_B = always_redraw(lambda: Dot(**moving_dot_kwargs).move_to(LineE2.make_R3(self.triangleE2(A_dot, B_dot, C_dot).unsigned_circle_center(B_dot.get_center()[0:2]))))
+        unsigned_circle_B = always_redraw(lambda: Circle(radius=self.triangleE2(A_dot, B_dot, C_dot).unsigned_circle_radius(B_dot.get_center()[0:2]), **circle_kwargs).move_to(unsigned_center_B))
+
+        unsigned_center_C = always_redraw(lambda: Dot(**moving_dot_kwargs).move_to(LineE2.make_R3(self.triangleE2(A_dot, B_dot, C_dot).unsigned_circle_center(C_dot.get_center()[0:2]))))
+        unsigned_circle_C = always_redraw(lambda: Circle(radius=self.triangleE2(A_dot, B_dot, C_dot).unsigned_circle_radius(C_dot.get_center()[0:2]), **circle_kwargs).move_to(unsigned_center_C))
+
+        self.add(A_dot, B_dot, C_dot, A_tex, B_tex, C_tex, AB_line, BC_line, AC_line)
+        self.wait()
         self.play(self.camera.frame.animate.scale(4))
-        self.play(Create(inscribed_circle_redraw), Create(unsigned_circle_A_redraw), Create(unsigned_circle_C_redraw), Create(unsigned_circle_B_redraw))
-        self.wait(2)
+        self.wait()
+        self.play(AnimationGroup(DrawBorderThenFill(incenter), DrawBorderThenFill(unsigned_center_A), DrawBorderThenFill(unsigned_center_B), DrawBorderThenFill(unsigned_center_C)))
+        self.play(AnimationGroup(Create(inscribed_circle), Create(unsigned_circle_A), Create(unsigned_circle_C), Create(unsigned_circle_B)))
         self.play(A_dot.animate.shift(5*LEFT), B_dot.animate.shift(5*RIGHT), C_dot.animate.shift(5*UP), run_time=2)
         self.play(A_dot.animate.shift(5*RIGHT), B_dot.animate.shift(5*LEFT), C_dot.animate.shift(5*DOWN), run_time=2)
         self.play(A_dot.animate.shift(5*RIGHT), B_dot.animate.shift(5*RIGHT), run_time=2)
         self.play(A_dot.animate.shift(5*LEFT), B_dot.animate.shift(5*LEFT), run_time=2)
+        self.wait()
         self.play(FadeOut(*self.mobjects))
+
+    @staticmethod
+    def triangleE2(A_dot: Dot, B_dot: Dot, C_dot: Dot):
+        return TriangleE2(A=A_dot.get_center()[0:2], B=B_dot.get_center()[0:2], C=C_dot.get_center()[0:2])
