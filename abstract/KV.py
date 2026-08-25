@@ -1,9 +1,8 @@
 from __future__ import annotations
-from typing import Self
 import math
 import numpy as np
 from numpy import ndarray
-from KV_abstract import *
+from abstract.KV_abstract import *
 
 
 class Bilinear_Function_KV(Bilinear_Function_KV_ABC):
