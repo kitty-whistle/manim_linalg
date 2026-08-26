@@ -30,7 +30,14 @@ class LineE3(Line_KV):
 
     def intersection(self, other: Self | Plane_KV) -> ndarray:
         if isinstance(other, LineE3):
-            extended_system_matrix = np.array([])
+            extended_system_matrix = np.array([
+                [1, 0, 0, -self.direction_vector.coordinates[0], self.start_point[0]],
+                [0, 1, 0, -self.direction_vector.coordinates[1], self.start_point[1]],
+                [0, 0, 1, -self.direction_vector.coordinates[2], self.start_point[2]],
+                [1, 0, 0, -other.direction_vector.coordinates[0], self.end_point[0]],
+                [0, 1, 0, -other.direction_vector.coordinates[1], self.end_point[1]],
+                [0, 0, 1, -other.direction_vector.coordinates[2], self.end_point[2]],
+            ])
 
             if np.linalg.matrix_rank(extended_system_matrix) > 4:
                 raise ZeroDivisionError("Lines are interbreeding")
@@ -119,26 +126,26 @@ class LineE3(Line_KV):
 
     def angle(self, other: Self | Plane_KV) -> float:
         if isinstance(other, LineE3):
-            pass
+            return self.direction_vector.angle(other.direction_vector)
         elif isinstance(other, PlaneE3):
-            pass
+            intersection = self.intersection(other)
+            perpendicular = LineE3(start_point=self.start_point, end_point=self.start_point + other.normal_vector.coordinates)  # Ортогональная составляющая
+            projection = perpendicular.intersection(other)
+            return perpendicular.angle(LineE3(start_point=projection, end_point=intersection)) # Ортогональная проекция
         else:
             raise TypeError
 
-    def projection(self, point: ndarray) -> ndarray:
-        pass
-
     def get_Line(self, **kwargs) -> Line | Line3D:
-        pass
+        return Line3D(start=self.start_point, end=self.end_point, **kwargs)
 
     def scale(self, scalar: float) -> Self:
-        pass
+        return LineE3(self.start_point - (self.direction_vector * scalar).coordinates, self.end_point + (self.direction_vector * scalar).coordinates)
 
     def __neg__(self) -> Self:
-        pass
+        return LineE3(self.end_point, self.start_point)
 
     def __abs__(self) -> Self:
-        pass
+        return abs(self.direction_vector)
 
 
 class PlaneE3(Plane_KV):

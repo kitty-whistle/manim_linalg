@@ -40,14 +40,14 @@ class Line_KV(ABC):
         """
         pass
 
-    @abstractmethod
-    def projection(self, point: ndarray) -> ndarray:
-        """
-        Вычисление координат проекции точки на прямую
-        :param point: Проекционная точка
-        :return: Проекция (0-мерная ортогональная составляющая)
-        """
-        pass
+#    @abstractmethod
+#    def projection(self, point: ndarray) -> ndarray:
+#        """
+#        Вычисление координат проекции точки на прямую
+#        :param point: Проекционная точка
+#        :return: Проекция (0-мерная ортогональная составляющая)
+#        """
+#        pass
 
     @abstractmethod
     def get_Line(self, **kwargs) -> Line | Line3D:
