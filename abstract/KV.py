@@ -70,7 +70,7 @@ class Vector_KV(Vector_KV_ABC):
         self.coordinates *= (1 / scalar)
         return self
 
-    def normalize(self) -> Vector_KV:
+    def normalize(self) -> Self:
         normalization = 0
         for i in self.coordinates:
             normalization += i**2

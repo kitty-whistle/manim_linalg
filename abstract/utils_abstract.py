@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 from manim import Line, Line3D
 from numpy import ndarray
 from manim import Surface
-from utils_2D import LineE2
+# from utils_2D import LineE2
 
 
 class Linear_Surface(ABC):
