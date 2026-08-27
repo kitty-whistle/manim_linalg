@@ -57,6 +57,16 @@ class Vector_KV(Vector_KV_ABC):
 
         raise TypeError("Unsupported operand type")
 
+    def vec_mul(self, other: Self) -> Self:
+        vec_mul_self_matrix = np.array([
+            [0, -self.coordinates[2], self.coordinates[1]],
+            [self.coordinates[2], 0, -self.coordinates[0]],
+            [-self.coordinates[1], -self.coordinates[0], 0],
+        ])
+
+        return Linear_Operator_KV(vec_mul_self_matrix).apply(other)
+
+
     def __abs__(self) -> float:
         return math.sqrt(self * self)
 

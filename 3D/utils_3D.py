@@ -11,6 +11,21 @@ from abstract.KV import Linear_Operator_KV
 
 
 class LineE3(Line_KV):
+
+    def projection(self, point: ndarray) -> ndarray:
+
+        # Плоскость на точке и прямой (на 2 неколлинеарных векторах)
+        vec_1 = self.direction_vector
+        vec_2 = Vector_KV(coordinates=point - self.start_point)
+
+        if np.linalg.matrix_rank(np.array(vec_1.coordinates, vec_2.coordinates)) != 2:
+            raise TypeError("Unsupported operand type (point is on the line)")
+
+        plane = PlaneE3(normal_vector=vec_1.vec_mul(vec_2), plane_point=point)
+        perpendicular_direction = self.line_by_angle(self.start_point, {plane: PI/2}, 1).direction_vector
+        perpendicular_line = LineE3(start_point=point, end_point=point + perpendicular_direction.coordinates)
+        return perpendicular_line.intersection(self)
+
     def __init__(self, start_point: ndarray, end_point: ndarray):
         self.start_point = start_point
         self.end_point = end_point
@@ -116,10 +131,10 @@ class LineE3(Line_KV):
         else:
             raise TypeError
 
-    def line_by_angle(self, start_point: ndarray, rotations: Dict[Vector_KV: float], length: float) -> Self:
+    def line_by_angle(self, start_point: ndarray, rotations: Dict[PlaneE3, float], length: float) -> Self:
         new_direction_vector = self.direction_vector
-        for axe, angle in rotations.items():
-            new_direction_vector = self.rotation_operator_by_angle(axe, angle).apply(new_direction_vector)
+        for plane, angle in rotations.items():
+            new_direction_vector = self.rotation_operator_by_angle(plane.normal_vector, angle).apply(new_direction_vector)
         new_direction_vector = new_direction_vector.normalize()
 
         return Line(start_point, start_point + (new_direction_vector * length).coordinates)
@@ -157,13 +172,25 @@ class PlaneE3(Plane_KV):
             1] * self.plane_point[1] - self.normal_vector.coordinates[2] * self.plane_point[2]
 
     def intersection(self, other: Self | Line_KV) -> ndarray:
-        pass
+        if isinstance(other, LineE3):
+            return other.intersection(self)
 
-    def plane_by_angle(self, **kwargs) -> Self:
+        elif isinstance(other, PlaneE3):
+            # 1-мерное пространство решений
+            return None
+
+        raise TypeError
+
+    def plane_by_angle(self, angle: float) -> Self:
         pass
 
     def angle(self, other: Self | Line_KV) -> float:
-        pass
+        if isinstance(other, LineE3):
+            pass
+        elif isinstance(other, PlaneE3):
+            pass
+
+        raise TypeError
 
     def projection(self, other: Line_KV | ndarray) -> Line_KV | ndarray:
         pass

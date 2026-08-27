@@ -5,8 +5,14 @@ from numpy import ndarray
 import math
 from manim import *
 
+from abstract.utils_abstract import Line_KV
 
-class LineE2:
+
+class LineE2(Line_KV):
+
+    def projection(self, point: ndarray) -> ndarray:
+        return LineE2(start_point=point, end_point=self.direction_vector.coordinates + point).intersection(self)
+
     def __init__(self, start_point: ndarray, end_point: ndarray):
         """
         Конструктор класса линий (т.е отрезков прямой) в двумерном Евклидовом пространстве
