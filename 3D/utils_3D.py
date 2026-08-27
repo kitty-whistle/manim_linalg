@@ -3,12 +3,14 @@ from __future__ import annotations
 import math
 from typing import Dict
 
+import numpy as np
+
 from abstract.KV import Vector_KV
 from abstract.utils_abstract import *
 from manim import *
 from sympy import Matrix
 from abstract.KV import Linear_Operator_KV
-
+from manimlib.imports import *
 
 class LineE3(Line_KV):
 
@@ -171,13 +173,44 @@ class PlaneE3(Plane_KV):
         self.free_member = - self.normal_vector.coordinates[0] * self.plane_point[0] - self.normal_vector.coordinates[
             1] * self.plane_point[1] - self.normal_vector.coordinates[2] * self.plane_point[2]
 
-    def intersection(self, other: Self | Line_KV) -> ndarray:
+    def intersection(self, other: Self | Line_KV) -> LineE3 | ndarray:
         if isinstance(other, LineE3):
             return other.intersection(self)
 
         elif isinstance(other, PlaneE3):
             # 1-мерное пространство решений
-            return None
+            x_matrix_1 = np.array([
+                [-self.free_member - self.normal_vector.coordinates[2], self.normal_vector.coordinates[1]],
+                [-other.free_member - other.normal_vector.coordinates[2], other.normal_vector.coordinates[1]]
+            ])
+
+            y_matrix_1 = np.array([
+                [self.normal_vector.coordinates[0], -self.free_member - self.normal_vector.coordinates[2]],
+                [other.normal_vector.coordinates[0], -other.free_member - other.normal_vector.coordinates[2]],
+            ])
+
+            system_matrix = np.array([
+                [self.normal_vector.coordinates[0], self.normal_vector.coordinates[1]],
+                [other.normal_vector.coordinates[0], self.normal_vector.coordinates[1]],
+            ])
+
+            if np.linalg.det(system_matrix) == 0:
+                raise ZeroDivisionError("Determinant is zero (Planes are parallel)")
+
+            x_matrix_2 = np.array([
+                [-self.free_member - self.normal_vector.coordinates[2], self.normal_vector.coordinates[1]],
+                [-other.free_member - other.normal_vector.coordinates[2], other.normal_vector.coordinates[1]]
+            ])
+
+            y_matrix_2 = np.array([
+                [self.normal_vector.coordinates[0], -self.free_member - 2 * self.normal_vector.coordinates[2]],
+                [other.normal_vector.coordinates[0], -other.free_member - 2 * other.normal_vector.coordinates[2]],
+            ])
+
+            start_point = np.array([np.linalg.det(x_matrix_1) / np.linalg.det(system_matrix), np.linalg.det(y_matrix_1) / np.linalg.det(system_matrix), 1])
+            end_point = np.array([np.linalg.det(x_matrix_2) / np.linalg.det(system_matrix), np.linalg.det(y_matrix_2) / np.linalg.det(system_matrix), 2])
+
+            return LineE3(start_point=start_point, end_point=end_point)
 
         raise TypeError
 
@@ -186,17 +219,27 @@ class PlaneE3(Plane_KV):
 
     def angle(self, other: Self | Line_KV) -> float:
         if isinstance(other, LineE3):
-            pass
+            return other.angle(self)
         elif isinstance(other, PlaneE3):
-            pass
+            return self.normal_vector.angle(other.normal_vector)
 
         raise TypeError
 
-    def projection(self, other: Line_KV | ndarray) -> Line_KV | ndarray:
-        pass
+    def projection(self, other: LineE3 | ndarray) -> LineE3 | ndarray:
+        if isinstance(other, LineE3):
+            end_point = other.intersection(self)
+            perpendicular_line = LineE3(start_point=other.start_point, end_point=self.normal_vector.coordinates + other.start_point)
+            return LineE3(start_point=perpendicular_line.intersection(self), end_point=end_point)
 
-    def get_Plane(self, **kwargs) -> Surface:
-        pass
+        elif isinstance(other, ndarray):
+            perpendicular_line = LineE3(start_point=other, end_point=self.normal_vector.coordinates + other)
+            return perpendicular_line.intersection(self)
+
+        raise TypeError
+
+    def get_Plane(self, **kwargs) -> ParametricSurface:
+        func = lambda x, y: np.array([x, y, (-self.normal_vector.coordinates[0] * x - self.normal_vector.coordinates[1] * y - self.free_member) / self.normal_vector[2]])
+        return ParametricSurface(func, **kwargs)
 
 
 if __name__ == "__main__":
