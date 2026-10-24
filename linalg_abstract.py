@@ -1,7 +1,6 @@
 from __future__ import annotations
 from typing import Self
 from abc import ABC, abstractmethod
-
 from numpy import ndarray
 
 
@@ -57,6 +56,17 @@ class Linear_Mapping_ABC(ABC):
         pass
 
 
+class Linear_Operator_ABC(ABC):
+    @abstractmethod
+    def apply(self, vector: Vector_ABC):
+        """
+        Применение линейного оператора к вектору
+        :param vector: Вектор
+        :return: Вектор
+        """
+        pass
+
+
 class Bilinear_Function_ABC(ABC):
 
     @abstractmethod
@@ -70,15 +80,6 @@ class Bilinear_Function_ABC(ABC):
         pass
 
 
-class Linear_Operator_ABC(ABC):
-    @abstractmethod
-    def apply(self, vector: Vector_ABC):
-        """
-        Применение линейного оператора к вектору
-        :param vector: Вектор
-        :return: Вектор
-        """
-        pass
 
 
 
