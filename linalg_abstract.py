@@ -177,6 +177,24 @@ class VectorE_ABC(Vector_ABC, ABC):
         """
         pass
 
+    @abstractmethod
+    def get_orthogonal_projection(self, subspace_basis: BasisE_ABC) -> ndarray:
+        """
+        Вычисление ортогональной проекции вектора self на подпространство, порожденное линейной оболочкой subspace_basis
+        :param subspace_basis: Базис подпространства к пространству, порожденному базисом self.basis
+        :return: Координаты вектора-проекции вектора self на подпространство, порожденное базисом subspace_basis
+        """
+        pass
+
+    @abstractmethod
+    def get_orthogonal_component(self, subspace_basis: BasisE_ABC) -> ndarray:
+        """
+        Вычисление ортогональной составляющей вектора к подпространству, порожденному линейной оболочкой subspace_basis
+        :param subspace_basis: Базис подпространства к пространству, порожденному self.basis
+        :return: Координаты вектора, являющегося ортогональной составляющей вектора self к подпространству, порожденному базисом subspace_basis
+        """
+        pass
+
 
 class BasisE_ABC(Basis_ABC, ABC):
 
@@ -187,11 +205,12 @@ class BasisE_ABC(Basis_ABC, ABC):
         """
         pass
 
-    @abstractmethod
-    def get_orthogonal_complement_basis(self) -> Self:
-        """
-        Построение базиса ортогонального дополнение к линейному пространству, порожденному базисом self
-        """
-        pass
-
+    # @abstractmethod
+    # def get_orthogonal_complement_basis(self, subspace_basis: BasisE_ABC) -> Self:
+    #     """
+    #     Построение базиса ортогонального дополнение к линейному пространству, порожденному базисом subspace_basis
+    #     :param subspace_basis: Базис подпространства линейного пространства, порожденного линейной оболочкой базиса self
+    #     :return: Базис ортогонального дополнения к линейному пространству, порожденному базисом subspace_basis
+    #     """
+    #     pass
 
