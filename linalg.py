@@ -41,9 +41,14 @@ class Vector(Vector_ABC):
         Если вектор записан в стандартном базисе, то basis = Basis.get_standard_basis(dimension)
         Но нужно иметь в виду, что у объекта Basis.get_standard_basis(dimension) поле self.vectors = None
         """
+        if len(coordinates) != basis.dimension:
+            raise DimensionMismatchError
         self.coordinates = coordinates
-        self.dimension = len(self.coordinates)  # немного топорно, но у стандартного базиса не задать размерность, потому что нет соответствующего объекта
+        self.dimension = len(self.coordinates)  # кол-во координат
         self.basis = basis
+
+    def __eq__(self, another: Vector):
+        return list(self.coordinates) == list(another.coordinates) and self.basis == another.basis
 
     def __add__(self, another: Self) -> Self:
         if self.basis != another.basis:
@@ -51,7 +56,6 @@ class Vector(Vector_ABC):
         return Vector(coordinates=self.coordinates + another.coordinates, basis=self.basis)
 
     def __sub__(self, other: Self) -> Self:
-        # print(type(self), type(other))
         if self.basis != other.basis:
             raise BasisMismatchError
         return Vector(coordinates=self.coordinates - other.coordinates, basis=self.basis)
@@ -62,6 +66,9 @@ class Vector(Vector_ABC):
     def __mul__(self, another: float) -> float | Self:
         return Vector(coordinates=self.coordinates * another, basis=self.basis)
 
+    def __rmul__(self, another: float) -> float | Self:
+        return self.__mul__(another)
+
     def change_basis(self, basis: Basis) -> Vector:
         if self.basis.dimension != self.dimension:
             raise DimensionMismatchError
@@ -69,7 +76,7 @@ class Vector(Vector_ABC):
         return Vector(coordinates=coordinates, basis=basis)
 
     def __str__(self) -> str:
-        pass
+        return f"Vector(coordinates={self.coordinates}, basis={self.basis})"
 
 
 class Basis(Basis_ABC):
@@ -97,13 +104,9 @@ class Basis(Basis_ABC):
 
     def __init__(self, vectors: list[Vector]):
         for vector in vectors:
-            if vector.basis is not None:
-                # Переписать этот фрагмент с новыми требованиями к стандартному базису
+            if vector.basis != self.get_standard_basis(dimension=vector.dimension):
                 raise NonCanonicalBasisError
-
-            elif len(vector.coordinates) != len(vectors):
-                raise DimensionMismatchError
-
+        # Начать думать отсюда
         if len(vectors) != len(vectors[0].coordinates):
             raise DimensionMismatchError
 
@@ -115,6 +118,12 @@ class Basis(Basis_ABC):
         self.transition_from_standard = np.array([vector.coordinates for vector in vectors]).transpose()
         self.transition_from_standard_reversed = np.linalg.inv(self.transition_from_standard)
         self.is_standard_basis = False
+
+    def __eq__(self, another: Basis) -> bool:
+        if self.is_standard_basis == another.is_standard_basis:
+            return self.dimension == another.dimension
+
+        return self.vectors == another.vectors
 
     def decompose(self, vector: Vector) -> ndarray:
         if vector.dimension != self.dimension:
@@ -130,7 +139,7 @@ class Basis(Basis_ABC):
         return another_basis.transition_from_standard_reversed @ self.transition_from_standard
 
     def __str__(self) -> str:
-        return str(list(map(str, self.vectors)))
+        return f"Basis(vectors={self.vectors}, is_standard_basis={self.is_standard_basis})"
 
 
 class Linear_Mapping(Linear_Mapping_ABC):
@@ -157,7 +166,7 @@ class Linear_Mapping(Linear_Mapping_ABC):
         return Vector(coordinates=coordinates, basis=self.basis_W)
 
     def __str__(self) -> str:
-        pass
+        return f"Linear_Mapping(matrix={self.matrix}, basis_V={self.basis_V}, basis_W={self.basis_W})"
 
 
 class Linear_Operator(Linear_Operator_ABC):
@@ -182,7 +191,7 @@ class Linear_Operator(Linear_Operator_ABC):
         coordinates = (self.matrix @ vector.coordinates.transpose()).transpose()
         return Vector(coordinates=coordinates, basis=self.basis)
 
-    def calculate_eigenvectors_and_eigenvalues(self) -> dict[VectorE, float]:
+    def calculate_eigenvalues_and_eigenvectors(self) -> dict[VectorE, float]:
         eigenvalues, eigenvectors = np.linalg.eig(self.matrix)
         return {VectorE(coordinates=eigenvectors[i], basis=BasisE.get_standard_basis(len(eigenvectors[i]))): eigenvalues[i] for i in range(len(eigenvalues))}
 
@@ -198,7 +207,7 @@ class Linear_Operator(Linear_Operator_ABC):
         return None
 
     def __str__(self) -> str:
-        pass
+        return f"Linear_Operator(matrix={self.matrix}, basis={self.basis})"
 
 
 class Bilinear_Function(Bilinear_Function_ABC):
@@ -222,7 +231,7 @@ class Bilinear_Function(Bilinear_Function_ABC):
         return float(vector_1.coordinates.transpose() @ self.matrix @ vector_2.coordinates)
 
     def __str__(self) -> str:
-        pass
+        return f"Bilinear_Function(matrix={self.matrix}, basis={self.basis})"
 
 
 class VectorE(Vector, VectorE_ABC):
@@ -302,7 +311,7 @@ class VectorE(Vector, VectorE_ABC):
         return VectorE(coordinates=component_coordinates, basis=addition_basis)
 
     def __str__(self) -> str:
-        return str(self.coordinates) + str(self.basis)
+        return f"VectorE(coordinates={self.coordinates}, basis={self.basis})"
 
 
 class BasisE(BasisE_ABC, Basis):
@@ -337,9 +346,12 @@ class BasisE(BasisE_ABC, Basis):
 
         return BasisE(vectors=other_basis)
 
-    # def get_orthogonal_complement_basis(self, subspace_basis: BasisE) -> Self:
-    #     pass
+    def __str__(self) -> str:
+        return f"BasisE(vectors={self.vectors})"
 
 
 if __name__ == "__main__":
-    pass
+    vector_a = Vector(coordinates=np.array([1, 2]), basis=Basis.get_standard_basis(dimension=3))
+    vector_b = Vector(coordinates=np.array([2, 4]), basis=Basis.get_standard_basis(dimension=3))
+    basis_ab = Basis(vectors=[vector_a, vector_b])
+    print(basis_ab)

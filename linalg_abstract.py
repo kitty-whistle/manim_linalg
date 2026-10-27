@@ -197,18 +197,18 @@ class VectorE_ABC(Vector_ABC, ABC):
     @abstractmethod
     def get_orthogonal_projection(self, subspace_basis: BasisE_ABC) -> ndarray:
         """
-        Вычисление ортогональной проекции вектора self на подпространство, порожденное линейной оболочкой subspace_basis
-        :param subspace_basis: Базис подпространства к пространству, порожденному базисом self.basis
-        :return: Координаты вектора-проекции вектора self на подпространство, порожденное базисом subspace_basis
+        Поиск ортогональной проекции вектора self на подпространство, порожденное базисом subspace_basis
+        :param subspace_basis: Базис линейного подпространства пространства, порожденного self.basis
+        Важным является то, что subspace_basis должен лежать в self.basis
         """
         pass
 
     @abstractmethod
     def get_orthogonal_component(self, subspace_basis: BasisE_ABC) -> ndarray:
         """
-        Вычисление ортогональной составляющей вектора к подпространству, порожденному линейной оболочкой subspace_basis
-        :param subspace_basis: Базис подпространства к пространству, порожденному self.basis
-        :return: Координаты вектора, являющегося ортогональной составляющей вектора self к подпространству, порожденному базисом subspace_basis
+        Поиск ортогональной составляющей вектора self к подпространству, порожденному базисом subspace_basis
+        :param subspace_basis: Базис линейного подпространства пространства, порожденного self.basis
+        Важным является то, что subspace_basis должен лежать в self.basis
         """
         pass
 
