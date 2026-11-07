@@ -10,7 +10,7 @@ class Vector_ABC(ABC):
     """
 
     @abstractmethod
-    def __add__(self, another: Self) -> Self:
+    def __add__(self, another: Vector_ABC) -> Vector_ABC:
         """
         Операция сложения векторов, необходимая для определения векторного пространства
         :param another: Вектор-слагаемое
@@ -19,14 +19,14 @@ class Vector_ABC(ABC):
         pass
 
     @abstractmethod
-    def __neg__(self) -> Self:
+    def __neg__(self) -> Vector_ABC:
         """
         Операция поиска противоположного вектора
         :return: Противоположный вектор
         """
 
     @abstractmethod
-    def __mul__(self, another: float) -> Self:
+    def __mul__(self, another: float) -> Vector_ABC:
         """
         Операция умножения на число
         :param another: число
@@ -35,7 +35,7 @@ class Vector_ABC(ABC):
         pass
 
     @abstractmethod
-    def change_basis(self, another_basis: Basis_ABC) -> Self:
+    def change_basis(self, another_basis: Basis_ABC) -> Vector_ABC:
         """
         Смена базиса, в котором задан вектор self, на another_basis
         :param another_basis: Новый базис линейного пространства V, в котором необходимо задать вектор self
@@ -48,14 +48,6 @@ class Basis_ABC(ABC):
     """
     Класс базисов n-мерного линейного пространства V
     """
-
-    @abstractmethod
-    def decompose(self, vector: Vector_ABC) -> ndarray:
-        """
-        Разложение вектора vector по базису self
-        :param vector:
-        :return: вектор строка координат vector в базисе self
-        """
 
     @abstractmethod
     def get_transition_matrix(self, another_basis: Basis_ABC) -> ndarray:
@@ -73,7 +65,7 @@ class Linear_Mapping_ABC(ABC):
     """
 
     @abstractmethod
-    def change_basis(self, another_basis_V: Basis_ABC, another_basis_W: Basis_ABC) -> Self:
+    def change_basis(self, another_basis_V: Basis_ABC, another_basis_W: Basis_ABC) -> Linear_Mapping_ABC:
         """
         Смена базисов, в котором задано линейное отображение на another_basis_V, another_basis_W
         :param another_basis_V: Новый базиc линейного пространства V
@@ -98,7 +90,7 @@ class Linear_Operator_ABC(ABC):
     """
 
     @abstractmethod
-    def change_basis(self, another_basis: Basis_ABC) -> Self:
+    def change_basis(self, another_basis: Basis_ABC) -> Linear_Operator_ABC:
         """
         Смена базиса, в котором задано линейное отображение на another_basis
         :param another_basis: Новый базис линейного пространства V
@@ -122,7 +114,7 @@ class Linear_Operator_ABC(ABC):
         pass
 
     @abstractmethod
-    def diagonalize(self) -> Self:
+    def diagonalize(self) -> Linear_Operator_ABC:
         """
         Задание оператора в "хорошем" базисе, т.е в базисе из собственных векторов + стандартное дополнение до E^n
         Замечание 1: Если оператор диагонализуем, то возвращение оператора в базисе из собственных векторов
@@ -137,7 +129,7 @@ class Bilinear_Function_ABC(ABC):
     """
 
     @abstractmethod
-    def change_basis(self, another_basis: Basis_ABC) -> Self:
+    def change_basis(self, another_basis: Basis_ABC) -> Bilinear_Function_ABC:
         """
         Смена базиса, в котором задана билинейная функция на another_basis
         :param another_basis: Новый базис линейного пространства V
@@ -161,7 +153,7 @@ class VectorE_ABC(Vector_ABC, ABC):
     """
 
     @abstractmethod
-    def __mul__(self, another: float | Self) -> Self | float:
+    def __mul__(self, another: float | VectorE_ABC) -> VectorE_ABC | float:
         """
         Операция умножения (на число, скалярно с другим вектором), необходимая для определения Евклидового векторного пространства
         :param another: Вектор или число
@@ -170,7 +162,7 @@ class VectorE_ABC(Vector_ABC, ABC):
         pass
 
     @abstractmethod
-    def __abs__(self) -> Self:
+    def __abs__(self) -> float:
         """
         Операция измерения длины вектора
         :return: Число (корень из скалярного квадрата)
@@ -187,7 +179,7 @@ class VectorE_ABC(Vector_ABC, ABC):
         pass
 
     @abstractmethod
-    def normalize(self) -> Self:
+    def normalize(self) -> VectorE_ABC:
         """
         Операция нормировки вектора
         :return: Нормированный на единицу вектор
@@ -195,7 +187,7 @@ class VectorE_ABC(Vector_ABC, ABC):
         pass
 
     @abstractmethod
-    def get_orthogonal_projection(self, subspace_basis: BasisE_ABC) -> ndarray:
+    def get_orthogonal_projection(self, subspace_basis: BasisE_ABC) -> VectorE_ABC:
         """
         Поиск ортогональной проекции вектора self на подпространство, порожденное базисом subspace_basis
         :param subspace_basis: Базис линейного подпространства пространства, порожденного self.basis
@@ -204,7 +196,7 @@ class VectorE_ABC(Vector_ABC, ABC):
         pass
 
     @abstractmethod
-    def get_orthogonal_component(self, subspace_basis: BasisE_ABC) -> ndarray:
+    def get_orthogonal_component(self, subspace_basis: BasisE_ABC) -> VectorE_ABC:
         """
         Поиск ортогональной составляющей вектора self к подпространству, порожденному базисом subspace_basis
         :param subspace_basis: Базис линейного подпространства пространства, порожденного self.basis
@@ -216,18 +208,9 @@ class VectorE_ABC(Vector_ABC, ABC):
 class BasisE_ABC(Basis_ABC, ABC):
 
     @abstractmethod
-    def normalize(self) -> Self:
+    def normalize(self) -> BasisE_ABC:
         """
         Построение ОНБ из self методом Грамма-Шмидта
         """
         pass
-
-    # @abstractmethod
-    # def get_orthogonal_complement_basis(self, subspace_basis: BasisE_ABC) -> Self:
-    #     """
-    #     Построение базиса ортогонального дополнение к линейному пространству, порожденному базисом subspace_basis
-    #     :param subspace_basis: Базис подпространства линейного пространства, порожденного линейной оболочкой базиса self
-    #     :return: Базис ортогонального дополнения к линейному пространству, порожденному базисом subspace_basis
-    #     """
-    #     pass
 

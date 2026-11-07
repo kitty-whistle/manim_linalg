@@ -44,7 +44,7 @@ class Vector(Vector_ABC):
         if len(coordinates) != basis.dimension:
             raise DimensionMismatchError
         self.coordinates = coordinates
-        self.dimension = len(self.coordinates)  # кол-во координат
+        # self.dimension = len(self.coordinates)  # кол-во координат
         self.basis = basis
 
     def __eq__(self, another: Vector):
@@ -70,9 +70,7 @@ class Vector(Vector_ABC):
         return self.__mul__(another)
 
     def change_basis(self, basis: Basis) -> Vector:
-        if self.basis.dimension != self.dimension:
-            raise DimensionMismatchError
-        coordinates = (basis.transition_from_standard_reversed @ self.coordinates.transpose()).transpose()
+        coordinates = np.array([round(value, 3) for value in (basis.transition_from_standard_reversed @ self.coordinates.transpose()).transpose()])
         return Vector(coordinates=coordinates, basis=basis)
 
     def __str__(self) -> str:
@@ -103,34 +101,33 @@ class Basis(Basis_ABC):
         return np.linalg.matrix_rank(np.array([vector.coordinates for vector in vectors]))
 
     def __init__(self, vectors: list[Vector]):
+        # Все вектора должны быть заданы в закрепленном стандартном базисе ↓
         for vector in vectors:
             if vector.basis != self.get_standard_basis(dimension=vector.dimension):
                 raise NonCanonicalBasisError
-        # Начать думать отсюда
-        if len(vectors) != len(vectors[0].coordinates):
-            raise DimensionMismatchError
 
+        # Условие линейной независимости ↓
         if np.linalg.det(np.array([vector.coordinates for vector in vectors])) == 0:
             raise LinearDependencyError
 
         self.vectors = vectors
         self.dimension = len(vectors)
-        self.transition_from_standard = np.array([vector.coordinates for vector in vectors]).transpose()
-        self.transition_from_standard_reversed = np.linalg.inv(self.transition_from_standard)
+        self.transition_from_standard = np.array([vector.coordinates for vector in vectors]).transpose()  # матрица перехода от закрепленного стандартного базиса
+        self.transition_from_standard_reversed = np.linalg.inv(self.transition_from_standard)  # обратная матрица перехода
         self.is_standard_basis = False
 
     def __eq__(self, another: Basis) -> bool:
+        # Стандартные базисы равны по определению, если совпадают размерности их линейных оболочек ↓
         if self.is_standard_basis == another.is_standard_basis:
             return self.dimension == another.dimension
 
         return self.vectors == another.vectors
 
-    def decompose(self, vector: Vector) -> ndarray:
-        if vector.dimension != self.dimension:
-            raise DimensionMismatchError
-
-        transition_matrix = self.get_transition_matrix(another_basis=vector.basis)
-        return (transition_matrix @ vector.coordinates).transpose()
+    # def decompose(self, vector: Vector) -> ndarray:
+    #     # if vector.basis != self:
+    #     #     raise BasisMismatchError
+    #     transition_matrix = self.get_transition_matrix(another_basis=vector.basis)
+    #     return np.array([round(value, 3) for value in (transition_matrix @ vector.coordinates).transpose()])
 
     def get_transition_matrix(self, another_basis: Basis) -> ndarray:
         if another_basis.dimension != self.dimension:
@@ -139,7 +136,10 @@ class Basis(Basis_ABC):
         return another_basis.transition_from_standard_reversed @ self.transition_from_standard
 
     def __str__(self) -> str:
-        return f"Basis(vectors={self.vectors}, is_standard_basis={self.is_standard_basis})"
+        if self.is_standard_basis:
+            return f"Basis(dimension={self.dimension}, is_standard_basis={self.is_standard_basis})"
+        else:
+            return f"Basis(vectors={[str(v) for v in self.vectors]}, is_standard_basis={self.is_standard_basis})"
 
 
 class Linear_Mapping(Linear_Mapping_ABC):
@@ -351,7 +351,9 @@ class BasisE(BasisE_ABC, Basis):
 
 
 if __name__ == "__main__":
-    vector_a = Vector(coordinates=np.array([1, 2]), basis=Basis.get_standard_basis(dimension=3))
-    vector_b = Vector(coordinates=np.array([2, 4]), basis=Basis.get_standard_basis(dimension=3))
+    vector_a = Vector(coordinates=np.array([1, 3]), basis=Basis.get_standard_basis(dimension=2))
+    vector_b = Vector(coordinates=np.array([2, 4]), basis=Basis.get_standard_basis(dimension=2))
     basis_ab = Basis(vectors=[vector_a, vector_b])
-    print(basis_ab)
+    # print(basis_ab)
+    vector_a = vector_a.change_basis(basis_ab)
+    print(vector_a)
