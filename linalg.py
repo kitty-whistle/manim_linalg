@@ -41,10 +41,12 @@ class Vector(Vector_ABC):
         Если вектор записан в стандартном базисе, то basis = Basis.get_standard_basis(dimension)
         Но нужно иметь в виду, что у объекта Basis.get_standard_basis(dimension) поле self.vectors = None
         """
+
+        #
         if len(coordinates) != basis.dimension:
             raise DimensionMismatchError
+
         self.coordinates = coordinates
-        # self.dimension = len(self.coordinates)  # кол-во координат
         self.basis = basis
 
     def __eq__(self, another: Vector):
