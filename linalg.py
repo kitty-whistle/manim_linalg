@@ -1,9 +1,5 @@
 from __future__ import annotations
-
-from collections import defaultdict
-
 import numpy as np
-
 from linalg_abstract import *
 
 
@@ -119,7 +115,7 @@ class Basis(Basis_ABC):
         # Конкатенация по столбцам: (n, k) и (n, m) → (n, k + m)
         # global_matrix = np.hstack([self.transition_from_standard, another_basis.transition_from_standard])
 
-        #if np.linalg.matrix_rank(global_matrix) != another_basis.dimension != self.dimension:
+        # if np.linalg.matrix_rank(global_matrix) != another_basis.dimension != self.dimension:
         #    raise ValueError("Линейные оболочки векторов базиса self и another_basis отличаются")
 
         # Это эквивалентно равенству линейных оболочек при условии Допущение 1
@@ -217,15 +213,7 @@ class Linear_Operator(Linear_Operator_ABC):
 
     @property
     def eigenvectors(self) -> dict[float, Vector]:
-        is_euclid = isinstance(self.basis, BasisE)
-
-        eigenvalues, eigenvectors = np.linalg.eig(self.matrix)
-
-        groups = defaultdict(list)
-        for i, lam in enumerate(eigenvalues):
-            groups[lam].append(eigenvectors[:, i])
-        return dict(groups)
-
+        return {}
 
     def diagonalize(self) -> Self:
         pass
@@ -313,12 +301,4 @@ class BasisE(Basis, BasisE_ABC):
 
 
 if __name__ == "__main__":
-    basis = BasisE.standard_basis(3)
-
-    matrix = np.array([
-        [2, 0, 0], [0, 2, 0], [0, 0, 5]
-    ])
-
-    operator = Linear_Operator(matrix, basis=basis)
-    print(operator.eigenvectors)
-
+    pass

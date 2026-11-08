@@ -128,8 +128,9 @@ class Linear_Operator_ABC(ABC):
         :return: Образ вектора vector в линейном пространстве W
         """
 
+    @property
     @abstractmethod
-    def calculate_eigenvalues_and_eigenvectors(self) -> dict[float, Vector_ABC]:
+    def eigenvectors(self) -> dict[float, Vector_ABC]:
         """
         Определение собственных значений и соответствующих им собственных векторов линейного оператора φ
         :return: словарь из собственных значений и соответствующих им собственный значений
