@@ -1,361 +1,324 @@
 from __future__ import annotations
 
-import math
-from io import UnsupportedOperation
+from collections import defaultdict
 
-from linalg_abstract import *
 import numpy as np
 
-
-class UnsupportedType(UnsupportedOperation):
-    """Несоответсвие типов"""
-
-
-class BasisMismatchError(ValueError):
-    """Объекты заданы в разных базисах"""
-    pass
-
-
-class DimensionMismatchError(ValueError):
-    """Объекты разных размерностей"""
-    pass
-
-
-class NonCanonicalBasisError(ValueError):
-    """Базис вектора не является стандартным"""
-    pass
-
-
-class LinearDependencyError(ValueError):
-    """Вектора линейно зависимы"""
-    pass
+from linalg_abstract import *
 
 
 class Vector(Vector_ABC):
+    """
+    Класс векторов n-мерного линейного пространства V
+    """
+
+    basis: Basis
+
     def __init__(self, coordinates: ndarray, basis: Basis):
         """
-        Конструктор класса векторов n-мерного линейного пространства
-        :param coordinates: координаты вектора
-        :param basis: базис линейного пространства, в котором заданы координаты.
-
-        Если вектор записан в стандартном базисе, то basis = Basis.get_standard_basis(dimension)
-        Но нужно иметь в виду, что у объекта Basis.get_standard_basis(dimension) поле self.vectors = None
+        Конструктор класса векторов n-мерного линейного пространства V
+        :param coordinates: координаты вектора в базисе basis
+        :param basis: базис векторного пространства, в котором заданы координаты вектора
         """
 
-        #
         if len(coordinates) != basis.dimension:
-            raise DimensionMismatchError
+            raise ValueError("Координаты вектора должны совпадать с размерностью базиса")
 
         self.coordinates = coordinates
         self.basis = basis
 
-    def __eq__(self, another: Vector):
-        return list(self.coordinates) == list(another.coordinates) and self.basis == another.basis
-
-    def __add__(self, another: Self) -> Self:
-        if self.basis != another.basis:
-            raise BasisMismatchError
-        return Vector(coordinates=self.coordinates + another.coordinates, basis=self.basis)
-
-    def __sub__(self, other: Self) -> Self:
-        if self.basis != other.basis:
-            raise BasisMismatchError
-        return Vector(coordinates=self.coordinates - other.coordinates, basis=self.basis)
+    def __eq__(self, other: Self) -> bool:
+        # Равенство векторов <-> равенству координат в одном и том же базисе
+        return np.array_equal(self.coordinates, other.coordinates) and self.basis == other.basis
 
     def __neg__(self) -> Self:
-        return Vector(coordinates=-self.coordinates, basis=self.basis)
+        return type(self)(-self.coordinates, self.basis)
 
-    def __mul__(self, another: float) -> float | Self:
-        return Vector(coordinates=self.coordinates * another, basis=self.basis)
+    def __add__(self, other: Self) -> Self:
+        if self.basis != other.basis:
+            raise ValueError("Вектора можно складывать только тогда, когда их базисы одинаковы")
 
-    def __rmul__(self, another: float) -> float | Self:
-        return self.__mul__(another)
+        return type(self)(self.coordinates + other.coordinates, self.basis)
 
-    def change_basis(self, basis: Basis) -> Vector:
-        coordinates = np.array([round(value, 3) for value in (basis.transition_from_standard_reversed @ self.coordinates.transpose()).transpose()])
-        return Vector(coordinates=coordinates, basis=basis)
+    def __sub__(self, other: Vector) -> Self:
+        return self + (-other)
+
+    def __mul__(self, other: float) -> Self:
+        return type(self)(self.coordinates * other, self.basis)
+
+    def change_basis(self, other_basis: Basis) -> Self:
+        transition_matrix = self.basis.get_transition_matrix(other_basis)  # transition_matrix: self.basis -> other_basis
+        new_coordinates = (transition_matrix @ self.coordinates.transpose()).transpose()
+        return type(self)(new_coordinates, other_basis)
 
     def __str__(self) -> str:
         return f"Vector(coordinates={self.coordinates}, basis={self.basis})"
 
 
 class Basis(Basis_ABC):
+    """
+    Класс базисов n-мерных линейных пространств V
+    """
+
+    is_standard_basis: bool
+    vectors: list[Vector] | None
 
     @classmethod
-    def get_standard_basis(cls, dimension: int) -> Basis:
-        standard_basis = cls.__new__(cls)
+    def standard_basis(cls, dimension: int) -> Self:
+        basis = cls.__new__(cls)
+        basis.vectors = None  # У стандартного базиса нет векторов!
+        basis.is_standard_basis = True
+        basis.transition_from_standard = np.identity(dimension)
+        basis.reversed_transition_from_standard = np.identity(dimension)
+        basis.dimension = dimension
 
-        standard_basis.vectors = None
-        standard_basis.dimension = dimension
-        standard_basis.transition_from_standard = np.identity(dimension)
-        standard_basis.transition_from_standard_reversed = np.identity(dimension)
-        standard_basis.is_standard_basis = True
-
-        return standard_basis
-
-    @staticmethod
-    def get_system_rank(vectors: list[Vector]) -> int:
-        dimension = vectors[0].dimension
-        for vector in vectors:
-            if vector.dimension != dimension:
-                raise DimensionMismatchError
-
-        return np.linalg.matrix_rank(np.array([vector.coordinates for vector in vectors]))
+        return basis
 
     def __init__(self, vectors: list[Vector]):
-        # Все вектора должны быть заданы в закрепленном стандартном базисе ↓
-        for vector in vectors:
-            if vector.basis != self.get_standard_basis(dimension=vector.dimension):
-                raise NonCanonicalBasisError
+        """
+        Конструктор класса базисов n-мерного линейного пространства
+        :param vectors: набор ЛНЗ векторов, на линейной оболочке которых строится линейное пространство.
 
-        # Условие линейной независимости ↓
-        if np.linalg.det(np.array([vector.coordinates for vector in vectors])) == 0:
-            raise LinearDependencyError
+        Допущение 1: размерность пространства, в котором заданы вектора, должна совпадать с количеством векторов.
+        (т.е количество координат у каждого из векторов vectors должна быть равна количеству самих этих векторов)
+        Это сделано для того, чтобы в рамках Vector и Basis работать только с квадратными матрицами.
+        Для перехода от базисов подпространств к базисам пространств будут служить линейные отображения.
+        """
 
-        self.vectors = vectors
-        self.dimension = len(vectors)
-        self.transition_from_standard = np.array([vector.coordinates for vector in vectors]).transpose()  # матрица перехода от закрепленного стандартного базиса
-        self.transition_from_standard_reversed = np.linalg.inv(self.transition_from_standard)  # обратная матрица перехода
         self.is_standard_basis = False
+        self.vectors = vectors
 
-    def __eq__(self, another: Basis) -> bool:
-        # Стандартные базисы равны по определению, если совпадают размерности их линейных оболочек ↓
-        if self.is_standard_basis == another.is_standard_basis:
-            return self.dimension == another.dimension
+        # Проверка на стандартный базис ↓
+        for vector in vectors:
+            if not vector.basis.is_standard_basis:
+                raise ValueError("Вектора заданы не в стандартном базисе")
 
-        return self.vectors == another.vectors
+        # Матрица перехода из закрепленного стандартного базиса в базис self (квадратная) ↓
+        self.transition_from_standard = np.array([vector.coordinates for vector in vectors]).transpose()
 
-    # def decompose(self, vector: Vector) -> ndarray:
-    #     # if vector.basis != self:
-    #     #     raise BasisMismatchError
-    #     transition_matrix = self.get_transition_matrix(another_basis=vector.basis)
-    #     return np.array([round(value, 3) for value in (transition_matrix @ vector.coordinates).transpose()])
+        # Проверка на Допущение 1
+        if self.transition_from_standard.shape[0] != self.transition_from_standard.shape[1]:
+            raise ValueError("Нарушено Допущение 1 (см. __init__)")
 
-    def get_transition_matrix(self, another_basis: Basis) -> ndarray:
-        if another_basis.dimension != self.dimension:
-            raise DimensionMismatchError
+        # Проверка на линейную независимость векторов | Существование обратной матрицы перехода ↓
+        if np.linalg.det(self.transition_from_standard) == 0:
+            raise ValueError("Вектора линейно зависимы")
+        self.reversed_transition_from_standard = np.linalg.inv(self.transition_from_standard)
 
-        return another_basis.transition_from_standard_reversed @ self.transition_from_standard
+        self.dimension = len(vectors)  # Размерность линейного пространства, построенного на линейной оболочке векторов
+
+    def __eq__(self, other: Self) -> bool:
+        # Для стандартных базисов равенство эквивалентно равенству размерностей линейных пространств, порожденных стандартным базисом
+        if self.is_standard_basis and other.is_standard_basis:
+            return self.dimension == other.dimension
+
+        # Для нестандартных базисов равенство эквивалентно равенству соответствующих векторов (вектора там заданы в стандартном базисе)
+        return self.vectors == other.vectors
+
+    def get_transition_matrix(self, another_basis: Self) -> ndarray:
+        # Конкатенация по столбцам: (n, k) и (n, m) → (n, k + m)
+        # global_matrix = np.hstack([self.transition_from_standard, another_basis.transition_from_standard])
+
+        #if np.linalg.matrix_rank(global_matrix) != another_basis.dimension != self.dimension:
+        #    raise ValueError("Линейные оболочки векторов базиса self и another_basis отличаются")
+
+        # Это эквивалентно равенству линейных оболочек при условии Допущение 1
+        if self.dimension != another_basis.dimension:
+            raise ValueError("Линейные оболочки векторов базиса self и another_basis отличаются")
+
+        return self.reversed_transition_from_standard @ another_basis.transition_from_standard
 
     def __str__(self) -> str:
         if self.is_standard_basis:
             return f"Basis(dimension={self.dimension}, is_standard_basis={self.is_standard_basis})"
-        else:
-            return f"Basis(vectors={[str(v) for v in self.vectors]}, is_standard_basis={self.is_standard_basis})"
+
+        return f"Basis(dimension={self.dimension}, vectors={[str(vector) for vector in self.vectors]}, is_standard_basis={self.is_standard_basis})"
 
 
 class Linear_Mapping(Linear_Mapping_ABC):
     def __init__(self, matrix: ndarray, basis_V: Basis, basis_W: Basis):
+        """
+        Конструктор класса линейных отображений φ: V -> W
+        :param matrix: Матрица, в i-ом столбце которой, записаны координаты образа i-го базисного вектора basis_V в базисе basis_W.
+        :param basis_V: базис пространства, из которого отображаются вектора.
+        :param basis_W: базис пространства, в которое отображаются вектора
+        """
         if matrix.shape[0] != basis_W.dimension or matrix.shape[1] != basis_V.dimension:
-            raise DimensionMismatchError
+            raise ValueError("Размерность матрицы не совпадает с размерностью пространства, построенного на базисах")
 
         self.matrix = matrix
         self.basis_V = basis_V
         self.basis_W = basis_W
 
-    def change_basis(self, another_basis_V: Basis, another_basis_W: Basis) -> Linear_Mapping:
-        if self.basis_V.dimension != another_basis_V.dimension or self.basis_W.dimension != another_basis_W.dimension:
-            raise DimensionMismatchError
+    def change_basis(self, another_basis_V: Basis, another_basis_W: Basis) -> Self:
+        transition_matrix_V = self.basis_V.get_transition_matrix(another_basis_V)
+        transition_matrix_W = self.basis_W.get_transition_matrix(another_basis_W)
 
-        new_matrix = another_basis_W.transition_from_standard_reversed @ self.matrix @ another_basis_V.transition_from_standard
+        new_matrix = transition_matrix_W @ self.matrix @ transition_matrix_V
         return Linear_Mapping(new_matrix, another_basis_V, another_basis_W)
 
     def apply(self, vector: Vector) -> Vector:
         if vector.basis != self.basis_V:
-            raise BasisMismatchError
+            raise ValueError("Вектор задан не в том же базисе, в котором задано линейное отображение")
 
         coordinates = (self.matrix @ vector.coordinates.transpose()).transpose()
-        return Vector(coordinates=coordinates, basis=self.basis_W)
+        return type(vector)(coordinates=coordinates, basis=self.basis_W)
 
     def __str__(self) -> str:
         return f"Linear_Mapping(matrix={self.matrix}, basis_V={self.basis_V}, basis_W={self.basis_W})"
+
+
+class Bilinear_Function(Bilinear_Function_ABC):
+
+    def __init__(self, matrix: ndarray, basis: Basis):
+        if basis.dimension != matrix.shape[0] or matrix.shape[0] != matrix.shape[1]:
+            raise ValueError("Размерность матрицы билинейной функции не совпадает с размерностью пространства, порожденного базисными векторами")
+
+        self.matrix = matrix
+        self.basis = basis
+
+    def change_basis(self, other_basis: Basis) -> Self:
+        if self.basis.dimension != other_basis.dimension:
+            raise ValueError("Базисы образуют линейные оболочки разной размерности")
+        new_matrix = other_basis.transition_from_standard.transpose() @ self.matrix @ other_basis.transition_from_standard
+        return type(self)(new_matrix, other_basis)
+
+    def apply(self, vector_1: Vector, vector_2: Vector) -> float:
+        if vector_1.basis != self.basis or vector_2.basis != self.basis:
+            raise ValueError("Вектора и билинейная функция должны быть заданы в одном и том же базисе")
+
+        return float(vector_1.coordinates.transpose() @ self.matrix @ vector_2.coordinates)
+
+    def __str__(self) -> str:
+        return f"Bilinear_Function(matrix={self.matrix}, basis={str(self.basis)})"
 
 
 class Linear_Operator(Linear_Operator_ABC):
 
     def __init__(self, matrix: ndarray, basis: Basis):
         if basis.dimension != matrix.shape[0] or matrix.shape[0] != matrix.shape[1]:
-            raise DimensionMismatchError
+            raise ValueError("Размерность матрицы линейного оператора не совпадает с размерностью пространства, порожденного базисными векторами")
 
         self.matrix = matrix
         self.basis = basis
 
-    def change_basis(self, another_basis: Basis) -> Linear_Operator:
-        if another_basis.dimension != self.basis.dimension:
-            raise DimensionMismatchError
-        new_matrix = another_basis.transition_from_standard_reversed @ self.matrix @ another_basis.transition_from_standard
-        return Linear_Operator(new_matrix, another_basis)
+    def change_basis(self, other_basis: Basis) -> Self:
+        if other_basis.dimension != self.basis.dimension:
+            raise ValueError("Базисы образуют линейные оболочки различных размерностей")
+        new_matrix = other_basis.reversed_transition_from_standard @ self.matrix @ other_basis.transition_from_standard
+        return type(self)(new_matrix, other_basis)
 
-    def apply(self, vector: Vector):
+    def apply(self, vector: Vector) -> Vector:
         if vector.basis != self.basis:
-            raise BasisMismatchError
+            raise ValueError("Вектор и линейные оператор заданы в разных базисах")
 
         coordinates = (self.matrix @ vector.coordinates.transpose()).transpose()
-        return Vector(coordinates=coordinates, basis=self.basis)
+        return type(vector)(coordinates=coordinates, basis=self.basis)
 
-    def calculate_eigenvalues_and_eigenvectors(self) -> dict[VectorE, float]:
+    @property
+    def eigenvectors(self) -> dict[float, Vector]:
+        is_euclid = isinstance(self.basis, BasisE)
+
         eigenvalues, eigenvectors = np.linalg.eig(self.matrix)
-        return {VectorE(coordinates=eigenvectors[i], basis=BasisE.get_standard_basis(len(eigenvectors[i]))): eigenvalues[i] for i in range(len(eigenvalues))}
+
+        groups = defaultdict(list)
+        for i, lam in enumerate(eigenvalues):
+            groups[lam].append(eigenvectors[:, i])
+        return dict(groups)
+
 
     def diagonalize(self) -> Self:
-        invariant_subspace = self.calculate_eigenvalues_and_eigenvectors()
-        eigenvectors = list(invariant_subspace.keys())
-
-        if self.basis.dimension == BasisE.get_system_rank(eigenvectors):
-            # Это и есть базис из собственных векторов
-            return self.change_basis(BasisE(vectors=eigenvectors))
-
-        # Надо дополнять до базиса self.basis
-        return None
-
-    def __str__(self) -> str:
-        return f"Linear_Operator(matrix={self.matrix}, basis={self.basis})"
-
-
-class Bilinear_Function(Bilinear_Function_ABC):
-    def __init__(self, matrix: ndarray, basis: Basis):
-        if basis.dimension != matrix.shape[0] or matrix.shape[0] != matrix.shape[1]:
-            raise DimensionMismatchError
-
-        self.matrix = matrix
-        self.basis = basis
-
-    def change_basis(self, another_basis: Basis) -> Bilinear_Function:
-        if self.basis.dimension != another_basis.dimension:
-            raise DimensionMismatchError
-        new_matrix = another_basis.transition_from_standard.transpose() @ self.matrix @ another_basis.transition_from_standard
-        return Bilinear_Function(new_matrix, another_basis)
-
-    def apply(self, vector_1: Vector, vector_2: Vector) -> float:
-        if vector_1.basis != self.basis or vector_2.basis != self.basis:
-            raise BasisMismatchError
-
-        return float(vector_1.coordinates.transpose() @ self.matrix @ vector_2.coordinates)
-
-    def __str__(self) -> str:
-        return f"Bilinear_Function(matrix={self.matrix}, basis={self.basis})"
+        pass
 
 
 class VectorE(Vector, VectorE_ABC):
+    basis: BasisE
+
     def __init__(self, coordinates: ndarray, basis: BasisE):
         super().__init__(coordinates, basis)
-        self.basis = basis
 
-    def __add__(self, another: Self) -> Self:
-        vector = super().__add__(another)
-        return VectorE(coordinates=vector.coordinates, basis=self.basis)
+    def __matmul__(self, other: Self) -> float:
+        if self.basis != other.basis:
+            raise ValueError("Вектора можно умножать скалярно только тогда, когда их базисы одинаковы")
 
-    def __sub__(self, another: Self) -> Self:
-        vector = super().__sub__(another)
-        return VectorE(coordinates=vector.coordinates, basis=self.basis)
-
-    def __neg__(self) -> Self:
-        vector = super().__neg__()
-        return VectorE(coordinates=vector.coordinates, basis=self.basis)
-
-    def __mul__(self, another: float | Self) -> Self | float:
-        if isinstance(another, float):
-            vector = super().__mul__(another)
-            return VectorE(vector.coordinates, self.basis)
-
-        elif isinstance(another, VectorE):
-            if self.basis != another.basis:
-                raise BasisMismatchError
-
-            return float(self.coordinates @ self.basis.gram_matrix @ another.coordinates.transpose())
-        else:
-            raise UnsupportedOperation
+        return float(self.coordinates @ self.basis.gram_matrix @ other.coordinates.transpose())
 
     def __abs__(self) -> float:
-        return math.sqrt(self * self)
+        return np.sqrt(self @ self)
 
     def angle(self, other: Self) -> float:
-        return math.acos((self * other) / (abs(self) * abs(other)))
+        if np.isclose(abs(other), 0) or np.isclose(abs(self), 0):
+            return np.pi / 2
+
+        cos_theta = (self @ other) / (abs(self) * abs(other))
+        return float(np.arccos(np.clip(cos_theta, -1.0, 1.0)))
 
     def normalize(self) -> Self:
-        normalization = 0
-        for i in self.coordinates:
-            normalization += i**2
-        normalization = normalization ** (1 / 2)
+        norm = abs(self)
+        if np.isclose(norm, 0):
+            raise ValueError("Нельзя нормировать нулевой вектор")
 
-        coordinates = np.array([round(cord / normalization, 3) for cord in self.coordinates])
-        return VectorE(coordinates=coordinates, basis=self.basis)
+        return type(self)(self.coordinates / norm, self.basis)
 
-    def get_orthogonal_projection(self, subspace_basis: BasisE) -> Self:
-        """
-        Поиск ортогональной проекции вектора self на подпространство, порожденное базисом subspace_basis
-        :param subspace_basis: Базис линейного подпространства пространства, порожденного self.basis
-        Важным является то, что subspace_basis должен лежать в self.basis
-        """
+    def get_orthogonal_component(self, subspace_indexes: list[int]) -> Self:
+        return self - self.get_orthogonal_projection(subspace_indexes)
 
-        # Будем искать ортогональную составляющую к подпространству, порожденному addition_basis
-        addition_basis = BasisE(vectors=[vector for vector in self.basis.vectors if vector not in subspace_basis])
-        return self.get_orthogonal_component(subspace_basis=addition_basis)
+    def get_orthogonal_projection(self, subspace_indexes: list[int]) -> Self:
+        P_matrix = self.basis.transition_from_standard[:, subspace_indexes]  # Часть матрицы self.basis.transition_from_standard, включающая только вектора-столбцы дополнения U
+        projection_coordinates = P_matrix @ np.linalg.inv(P_matrix.transpose() @ P_matrix) @ P_matrix.transpose() @ self.coordinates.transpose()
 
-    def get_orthogonal_component(self, subspace_basis: BasisE) -> Self:
-        """
-        Поиск ортогональной составляющей вектора self к подпространству, порожденному базисом subspace_basis
-        :param subspace_basis: Базис линейного подпространства пространства, порожденного self.basis
-        Важным является то, что subspace_basis должен лежать в self.basis
-        """
-        if subspace_basis not in self.basis:
-            raise BasisMismatchError
-
-        # self.basis - базис линейного пространства (e1....en)
-        # subspace_basis - базис линейного подпространства (e1...ek) k < n (БОО)
-        # addition_basis - базис дополнения subspace_basis до self.basis (ek+1...en) (БОО)
-        addition_basis = BasisE(vectors=[vector for vector in self.basis.vectors if vector not in subspace_basis])
-
-        heterogeneity = np.array([self * vector for vector in addition_basis.vectors]).transpose()
-        component_coordinates = (addition_basis.gram_matrix @ heterogeneity).transpose()  # координаты ортогональной проекции в базисе addition_basis
-
-        # Важно, что этот вектор уже задан в базисе дополнения U до E^n
-        return VectorE(coordinates=component_coordinates, basis=addition_basis)
-
-    def __str__(self) -> str:
-        return f"VectorE(coordinates={self.coordinates}, basis={self.basis})"
+        return type(self)(coordinates=projection_coordinates, basis=self.basis)
 
 
-class BasisE(BasisE_ABC, Basis):
+class BasisE(Basis, BasisE_ABC):
+
+    vectors: list[VectorE] | None
+
+    @classmethod
+    def standard_basis(cls, dimension: int) -> Self:
+        basis = super().standard_basis(dimension)  # BasisE, поскольку -> Self
+        basis.gram_matrix = np.identity(dimension)
+        return basis
+
     def __init__(self, vectors: list[VectorE]):
         super().__init__(vectors)
-        self.vectors = vectors
 
         # В стандартном базисе матрица скалярного произведения единичная -> в self ↓
         self.gram_matrix = self.transition_from_standard.transpose() @ self.transition_from_standard
+        self.reversed_gram_matrix = np.linalg.inv(self.gram_matrix)
 
     def normalize(self) -> Self:
         if self.is_standard_basis:
-            raise BasisMismatchError
+            return self
 
-        other_basis = self.vectors
+        other_vectors = self.vectors.copy()
 
         for vector_i_index in range(len(self.vectors)):
             vector_i = self.vectors[vector_i_index]
             new_vector_i = vector_i
-            for vector_j_index in range(len(self.vectors) - vector_i_index):
-                vector_j = self.vectors[vector_j_index]
+            for vector_j_index in range(vector_i_index):
+                vector_j = other_vectors[vector_j_index]
 
                 # Нормировочный коэффициент ортогональности i-го вектора для j-ого участника линейной оболочки
-                normalization_ij = - (vector_i * vector_j) / (vector_j * vector_j)
+                normalization_ij = - (new_vector_i @ vector_j) / (vector_j @ vector_j)
 
-                new_vector_i = new_vector_i - vector_j * normalization_ij
+                new_vector_i = new_vector_i + vector_j * normalization_ij
 
-            other_basis[vector_i_index] = new_vector_i
+            other_vectors[vector_i_index] = new_vector_i
 
         # Теперь other_basis ортогонален и имеет ту же линейную оболочку, его надо нормировать
-        other_basis = [other_vector.normalize() for other_vector in other_basis]
+        other_vectors = [other_vector.normalize() for other_vector in other_vectors]
 
-        return BasisE(vectors=other_basis)
-
-    def __str__(self) -> str:
-        return f"BasisE(vectors={self.vectors})"
+        return type(self)(other_vectors)
 
 
 if __name__ == "__main__":
-    vector_a = Vector(coordinates=np.array([1, 3]), basis=Basis.get_standard_basis(dimension=2))
-    vector_b = Vector(coordinates=np.array([2, 4]), basis=Basis.get_standard_basis(dimension=2))
-    basis_ab = Basis(vectors=[vector_a, vector_b])
-    # print(basis_ab)
-    vector_a = vector_a.change_basis(basis_ab)
-    print(vector_a)
+    basis = BasisE.standard_basis(3)
+
+    matrix = np.array([
+        [2, 0, 0], [0, 2, 0], [0, 0, 5]
+    ])
+
+    operator = Linear_Operator(matrix, basis=basis)
+    print(operator.eigenvectors)
+
