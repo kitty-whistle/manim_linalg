@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from linalg.linalg import *
 
 
@@ -6,44 +7,59 @@ class Point_ABC(ABC):
     """
     Класс точек n-мерного аффинного пространства
     """
-
     @abstractmethod
-    def __eq__(self, other: Point_ABC) -> bool:
+    def __eq__(self, other: Self) -> bool:
         """
         Операция проверки на равенство двух точек аффинного пространства
         """
         pass
 
     @abstractmethod
-    def __add__(self, other: Vector_ABC) -> Point_ABC:
+    def __add__(self, other: Vector_ABC) -> Self:
         """
         Операция сложения точки self c вектором other
         """
         pass
 
     @abstractmethod
-    def __sub__(self, other: Vector_ABC) -> Point_ABC:
+    def __sub__(self, other: Vector_ABC) -> Self:
         """
         Операция сложения точки self с вектором, противоположным вектору other
         """
         pass
 
     @abstractmethod
-    def vec_to(self, other: Point_ABC) -> Vector_ABC:
+    def vec_to(self, other: Self) -> Vector_ABC:
         """
         Операция восстановления вектора, соединяющего точки self и other
         """
         pass
 
 
-class Affine_Frame_ABC(ABC):
+class PointE_ABC(Point_ABC):
+
+    @abstractmethod
+    def dist(self, other: Self) -> float:
+        pass
+
+
+class AffineFrame_ABC(ABC):
     """
     Класс реперов n-мерного аффинного пространства
     """
 
+    @classmethod
     @abstractmethod
-    def __eq__(self, other: Affine_Frame_ABC) -> bool:
+    def standard_affine_frame(cls, dimension: int) -> Self:
+
+
+    @abstractmethod
+    def __eq__(self, other: AffineFrame_ABC) -> bool:
         pass
+
+
+class AffineFrameE_ABC(AffineFrame_ABC, ABC):
+    pass
 
 
 class Affine_Mapping_ABC(ABC):
@@ -52,7 +68,7 @@ class Affine_Mapping_ABC(ABC):
     """
 
     @abstractmethod
-    def change_frame(self, new_frame: Affine_Frame_ABC) -> Affine_Mapping_ABC:
+    def change_frame(self, new_affine_frame: AffineFrame_ABC) -> Affine_Mapping_ABC:
         """
         Смена репера аффинных пространств, в которых заданы аффинные пространства
         """
