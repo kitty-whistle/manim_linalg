@@ -301,4 +301,15 @@ class BasisE(Basis, BasisE_ABC):
 
 
 if __name__ == "__main__":
-    pass
+    standard = BasisE.standard_basis(4)
+    a = VectorE(np.array([1, 2, 3, 4]), standard)
+    b = VectorE(np.array([8, 9, 1, 2]), standard)
+    c = VectorE(np.array([6, 1, 8, 4]), standard)
+    d = VectorE(np.array([11, 92, 8, 4]), standard)
+
+    v = VectorE(np.array([8, 4, 3, 2]), standard)
+
+    new_basis = BasisE(vectors=[a, b, c, d])
+    print(v.change_basis(new_basis))
+
+

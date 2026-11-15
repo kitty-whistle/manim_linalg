@@ -1,7 +1,7 @@
 from __future__ import annotations
 import math
 import numpy as np
-from linalg_abstract import *
+from linalg.linalg_abstract import *
 
 
 class Bilinear_Function_KV(Bilinear_Function_KV_ABC):
